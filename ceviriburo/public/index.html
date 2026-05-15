@@ -1303,23 +1303,28 @@ function exportPDF(tab){
 }
 
 async function importEskiBorclar(){
-  if(!confirm('Eski Beşiktaş 3 ve 27 Borç kayıtları Firebase\'e aktarılacak. Devam?'))return;
+  if(!confirm('Eski Beşiktaş 3 ve 27 Borç kayıtları Gündem\'e aktarılacak. Devam?'))return;
   const b3Data=[
-    {id:'BES3_001',tarih:'2026-05-05',islem:'Şule Canaydın',noterBedel:11212.12,detay:'Beşiktaş 3 Borç',kaydeden:'Eren',olusturma:'2026-05-05T15:43:00Z'},
-    {id:'BES3_002',tarih:'2026-05-06',islem:'Yelda Demir/Aslı - Diploma Eki',noterBedel:19462.83,detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T16:50:00Z'},
-    {id:'BES3_003',tarih:'2026-05-12',islem:'Alihan Essani Pasaport',noterBedel:1510.19,detay:'Ofisten Teslim E.',kaydeden:'Sultan',olusturma:'2026-05-12T19:28:00Z'},
-    {id:'BES3_004',tarih:'2026-05-12',islem:'Jasmin Ara 2. Nüshalar',noterBedel:7077,detay:'Bilgi verilecek.',kaydeden:'Sultan',olusturma:'2026-05-12T13:01:00Z'},
-    {id:'BES3_005',tarih:'2026-05-12',islem:'Mehmet Egem K. - Nüfus Kayıt',noterBedel:2067.35,detay:'Kurye bedeli ekl.',kaydeden:'Sultan',olusturma:'2026-05-12T13:03:00Z'},
+    {id:'BES3_001',tarih:'2026-05-05',islem:'Şule Canaydın',noterBedel:11212.12,notereBorc:'Beşiktaş 3',detay:'Beşiktaş 3 Borç',kaydeden:'Eren',olusturma:'2026-05-05T15:43:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES3_002',tarih:'2026-05-06',islem:'Yelda Demir/Aslı - Diploma Eki',noterBedel:19462.83,notereBorc:'Beşiktaş 3',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T16:50:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES3_003',tarih:'2026-05-12',islem:'Alihan Essani Pasaport',noterBedel:1510.19,notereBorc:'Beşiktaş 3',detay:'Ofisten Teslim E.',kaydeden:'Sultan',olusturma:'2026-05-12T19:28:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES3_004',tarih:'2026-05-12',islem:'Jasmin Ara 2. Nüshalar',noterBedel:7077,notereBorc:'Beşiktaş 3',detay:'Bilgi verilecek.',kaydeden:'Sultan',olusturma:'2026-05-12T13:01:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES3_005',tarih:'2026-05-12',islem:'Mehmet Egem K. - Nüfus Kayıt',noterBedel:2067.35,notereBorc:'Beşiktaş 3',detay:'Kurye bedeli ekl.',kaydeden:'Sultan',olusturma:'2026-05-12T13:03:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
   ];
   const b27Data=[
-    {id:'BES27_001',tarih:'2026-05-06',islem:'BEEMAC - Selin Yetiş - 3 Evrak',noterBedel:7000,detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T11:51:07Z'},
+    {id:'BES27_001',tarih:'2026-05-06',islem:'BEEMAC - Selin Yetiş - 3 Evrak',noterBedel:7000,notereBorc:'Beşiktaş 27',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T11:51:07Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
   ];
+  const tumData=[...b3Data,...b27Data];
   setSyncStatus('ing','aktarılıyor...');
   try{
-    for(const r of b3Data){ await setDoc(doc(db,'borc3',r.id),r); }
-    for(const r of b27Data){ await setDoc(doc(db,'borc27',r.id),r); }
-    state.borc3=[...b3Data];
-    state.borc27=[...b27Data];
+    for(const r of tumData){
+      // Daha önce eklenmiş mi kontrol et
+      if(!state.gundem.find(x=>x.id===r.id)){
+        await setDoc(doc(db,'gundem',r.id),r);
+        state.gundem.unshift(r);
+      }
+    }
+    renderGundem(); renderBorc3(); renderBorc27();
     setSyncStatus('ok','hazır');
     toast('Aktarıldı ✓ — Beşiktaş 3: '+b3Data.length+' kayıt, Beşiktaş 27: '+b27Data.length+' kayıt');
   } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
