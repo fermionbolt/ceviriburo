@@ -56,6 +56,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237ab8c8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
 textarea{resize:none;min-height:62px}
 input[readonly]{opacity:.6;cursor:default}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
 input::placeholder,textarea::placeholder{color:var(--txt3)}
 .btn{padding:9px 16px;border-radius:var(--r2);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
@@ -201,9 +203,6 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           <div class="field full"><label>İŞLEM TANIMI</label><input type="text" id="f_islem" placeholder="Almanca şirket evrakları tercümesi..."></div>
           <div class="field"><label>İŞLEM TARİHİ</label><input type="date" id="f_tarih"></div>
           <div class="field"><label>TESLİM TARİHİ</label><input type="date" id="f_teslim"></div>
-          <div class="field"><label>İLGİLİ</label>
-            <select id="f_ilgili"><option value="">Seçin</option><option>Kapıdan</option><option>Şirket</option><option>Noterden</option><option>Whatsapp'tan</option><option>Mailde</option><option>Notta Yazılı</option><option>—</option></select>
-          </div>
           <div class="field"><label>TAKİP</label>
             <select id="f_takip"><option value="">Seçin</option><option>Eren</option><option>Deniz</option><option>Sultan</option><option>Evolin</option></select>
           </div>
@@ -457,6 +456,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
         <div class="card-hd"><div class="card-title">Veri Yönetimi</div></div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <button class="btn btn-g btn-full" onclick="exportBackup()">📦 Yedek İndir (JSON)</button>
+          <button class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
         </div>
       </div>
       <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">
@@ -475,7 +475,6 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
       <div class="field full"><label>İŞLEM TANIMI</label><input type="text" id="e_islem"></div>
       <div class="field"><label>İŞLEM TARİHİ</label><input type="date" id="e_tarih"></div>
       <div class="field"><label>TESLİM TARİHİ</label><input type="date" id="e_teslim"></div>
-      <div class="field"><label>İLGİLİ</label><select id="e_ilgili"><option value="">Seçin</option><option>Kapıdan</option><option>Şirket</option><option>Noterden</option><option>Whatsapp'tan</option><option>Mailde</option><option>Notta Yazılı</option><option>—</option></select></div>
       <div class="field"><label>TAKİP</label><select id="e_takip"><option value="">Seçin</option><option>Eren</option><option>Deniz</option><option>Sultan</option><option>Evolin</option></select></div>
       <div class="field"><label>NOTERE BORÇ</label><select id="e_notere_borc"><option value="">—</option><option>Beşiktaş 3</option><option>Beşiktaş 27</option></select></div>
       <div class="field"><label>NOTER / CARİ ALACAK</label><select id="e_noter"><option value="">Seçin</option></select></div>
@@ -693,7 +692,7 @@ async function saveRecord(){
   const islem=gv('f_islem'); if(!islem){toast('⚠ İşlem tanımı gerekli');return;}
   const rec={
     id:uid(), islem, tarih:gv('f_tarih')||today(), teslim:gv('f_teslim'),
-    ilgili:gv('f_ilgili'), noter:gv('f_noter'), takip:gv('f_takip'),
+    noter:gv('f_noter'), takip:gv('f_takip'),
     tercuman:gv('f_tercuman'), durum:gv('f_durum'), fatura:gv('f_fatura'),
     bedel:parseFloat(gv('f_bedel'))||0, kdv:gv('f_kdv'),
     kdvTutar:parseFloat(gv('f_kdvt'))||0,
@@ -715,7 +714,7 @@ async function saveRecord(){
 
 function clearForm(){
   ['f_islem','f_teslim','f_bedel','f_kdvt','f_noter_b','f_kurye','f_detay','f_tercuman'].forEach(id=>sv(id,''));
-  ['f_ilgili','f_noter','f_takip','f_durum','f_fatura','f_kdv','f_odeme','f_odeme_durum','f_notere_borc'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
+  ['f_noter','f_takip','f_durum','f_fatura','f_kdv','f_odeme','f_odeme_durum','f_notere_borc'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   sv('f_tarih',today());
 }
 
@@ -730,7 +729,7 @@ function getGundemFiltered(){
     else if(gFilter==='kontrol'){ if(r.durum!=='Kontrol Beklemede') return false; }
     else if(gFilter==='hazir')  { if(r.durum!=='Hazır') return false; }
     else if(gFilter==='tamamlandi'){ if(r.durum!=='Tamamlandı') return false; }
-    if(q){ const hay=[r.islem,r.noter,r.ilgili,r.tercuman,r.takip,r.detay,r.durum,r.fatura,r.notereBorc].map(x=>String(x||'').toLowerCase()).join(' '); if(!hay.includes(q))return false; }
+    if(q){ const hay=[r.islem,r.noter,r.tercuman,r.takip,r.detay,r.durum,r.fatura,r.notereBorc].map(x=>String(x||'').toLowerCase()).join(' '); if(!hay.includes(q))return false; }
     return true;
   });
 }
@@ -761,7 +760,7 @@ function recCard(r){
   if(r.kaydeden||r.olusturma)extras.push('✏ '+(r.kaydeden||'?')+' · '+fmtDateTime(r.olusturma));
   return`<div class="rec${r.durum==='Tamamlandı'?' done':''}">
     <div class="rec-actions"><button class="btn btn-g btn-sm" onclick="openEdit('${r.id}')">Düzenle</button></div>
-    <div class="rec-head"><div class="rec-info"><div class="rec-title">${r.islem||'—'}</div><div class="rec-sub">${fmtD(r.tarih)}${dlStr}${r.ilgili?' · '+r.ilgili:''}</div></div>${r.bedel?`<div class="rec-amount">${fmt(r.bedel)} ₺</div>`:''}</div>
+    <div class="rec-head"><div class="rec-info"><div class="rec-title">${r.islem||'—'}</div><div class="rec-sub">${fmtD(r.tarih)}${dlStr}</div></div>${r.bedel?`<div class="rec-amount">${fmt(r.bedel)} ₺</div>`:''}</div>
     <div class="tags">${fatTag}${odTag}${odDurTag}${durTag}</div>
     ${extras.length?`<div class="rec-extras">${extras.join(' · ')}</div>`:''}
     ${r.detay?`<div class="rec-note">${r.detay}</div>`:''}
@@ -790,7 +789,7 @@ async function confirmSaveEdit(){
   const idx=state.gundem.findIndex(x=>x.id===editingId); if(idx===-1)return;
   const updated=Object.assign({},state.gundem[idx],{
     islem:gv('e_islem'), tarih:gv('e_tarih'), teslim:gv('e_teslim'),
-    ilgili:gv('e_ilgili'), noter:gv('e_noter'), takip:gv('e_takip'),
+    noter:gv('e_noter'), takip:gv('e_takip'),
     tercuman:gv('e_tercuman'), durum:gv('e_durum'), fatura:gv('e_fatura'),
     bedel:parseFloat(gv('e_bedel'))||0, kdv:gv('e_kdv'),
     kdvTutar:parseFloat(gv('e_kdvt'))||0,
@@ -1303,7 +1302,29 @@ function exportPDF(tab){
   const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600);
 }
 
-function exportBackup(){
+async function importEskiBorclar(){
+  if(!confirm('Eski Beşiktaş 3 ve 27 Borç kayıtları Firebase\'e aktarılacak. Devam?'))return;
+  const b3Data=[
+    {id:'BES3_001',tarih:'2026-05-05',islem:'Şule Canaydın',noterBedel:11212.12,detay:'Beşiktaş 3 Borç',kaydeden:'Eren',olusturma:'2026-05-05T15:43:00Z'},
+    {id:'BES3_002',tarih:'2026-05-06',islem:'Yelda Demir/Aslı - Diploma Eki',noterBedel:19462.83,detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T16:50:00Z'},
+    {id:'BES3_003',tarih:'2026-05-12',islem:'Alihan Essani Pasaport',noterBedel:1510.19,detay:'Ofisten Teslim E.',kaydeden:'Sultan',olusturma:'2026-05-12T19:28:00Z'},
+    {id:'BES3_004',tarih:'2026-05-12',islem:'Jasmin Ara 2. Nüshalar',noterBedel:7077,detay:'Bilgi verilecek.',kaydeden:'Sultan',olusturma:'2026-05-12T13:01:00Z'},
+    {id:'BES3_005',tarih:'2026-05-12',islem:'Mehmet Egem K. - Nüfus Kayıt',noterBedel:2067.35,detay:'Kurye bedeli ekl.',kaydeden:'Sultan',olusturma:'2026-05-12T13:03:00Z'},
+  ];
+  const b27Data=[
+    {id:'BES27_001',tarih:'2026-05-06',islem:'BEEMAC - Selin Yetiş - 3 Evrak',noterBedel:7000,detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T11:51:07Z'},
+  ];
+  setSyncStatus('ing','aktarılıyor...');
+  try{
+    for(const r of b3Data){ await setDoc(doc(db,'borc3',r.id),r); }
+    for(const r of b27Data){ await setDoc(doc(db,'borc27',r.id),r); }
+    state.borc3=[...b3Data];
+    state.borc27=[...b27Data];
+    setSyncStatus('ok','hazır');
+    toast('Aktarıldı ✓ — Beşiktaş 3: '+b3Data.length+' kayıt, Beşiktaş 27: '+b27Data.length+' kayıt');
+  } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
+}
+window.importEskiBorclar=importEskiBorclar;
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ceviriburo_yedek_'+today()+'.json'; a.click(); toast('Yedek indirildi');
 }
