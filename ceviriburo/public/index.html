@@ -239,7 +239,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
       </div>
 
       <div class="search-wrap">
-        <input type="text" id="gundemSearch" placeholder="🔍  İşlem, noter, tercüman ara..." oninput="renderGundem()">
+        <input type="text" id="gundemSearch" placeholder="🔍  İşlem, noter, tercüman ara...">
         <button class="search-clear" onclick="document.getElementById('gundemSearch').value='';renderGundem()">×</button>
       </div>
 
@@ -263,14 +263,14 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
     <!-- FATURALAR -->
     <div class="panel" id="panel-faturalar">
       <div class="stats-3">
-        <div class="stat sy"><div class="lbl">Bekleyen Fatura</div><div class="val" id="fat_bekleyen">0</div></div>
-        <div class="stat sa"><div class="lbl">Bekleyen Tutar</div><div class="val" id="fat_bek_tutar">0 ₺</div></div>
-        <div class="stat sg"><div class="lbl">Kesilen Fatura</div><div class="val" id="fat_kesilen">0</div></div>
+        <div class="stat sy"><div class="lbl">Bekleyen Fatura Adedi</div><div class="val" id="fat_bekleyen">0</div></div>
+        <div class="stat sg"><div class="lbl">Kesilen Fatura Adedi</div><div class="val" id="fat_kesilen">0</div></div>
+        <div class="stat sa"><div class="lbl">Toplam Fatura Adedi</div><div class="val" id="fat_toplam_adet">0</div></div>
       </div>
       <div class="stats-3">
-        <div class="stat sg"><div class="lbl">Kesilen Tutar</div><div class="val" id="fat_kes_tutar">0 ₺</div></div>
-        <div class="stat sa"><div class="lbl">Toplam Adet</div><div class="val" id="fat_toplam_adet">0</div></div>
-        <div class="stat sp"><div class="lbl">Toplam Tutar</div><div class="val" id="fat_toplam_tutar">0 ₺</div></div>
+        <div class="stat sy"><div class="lbl">Bekleyen Fatura Tutarı</div><div class="val" id="fat_bek_tutar">0 ₺</div></div>
+        <div class="stat sg"><div class="lbl">Kesilen Fatura Tutarı</div><div class="val" id="fat_kes_tutar">0 ₺</div></div>
+        <div class="stat sp"><div class="lbl">Toplam Fatura Tutarı</div><div class="val" id="fat_toplam_tutar">0 ₺</div></div>
       </div>
       <div class="fbar" id="fatFilterBar">
         <button class="fbtn active" onclick="setFatF('tumu',this)">Tümü</button>
@@ -626,6 +626,8 @@ async function init() {
   // Tab bar mouse wheel scroll
   const tabBar=document.getElementById('tabBar');
   tabBar.addEventListener('wheel',e=>{e.preventDefault();tabBar.scrollLeft+=e.deltaY;},{passive:false});
+  // Gündem arama
+  document.getElementById('gundemSearch').addEventListener('input',()=>renderGundem());
 }
 
 async function syncNow() {
