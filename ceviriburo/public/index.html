@@ -303,7 +303,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           </div>
           <div class="field full"><label>AÇIKLAMA</label><input type="text" id="k_aciklama" placeholder="Kira, ofis malzemesi..."></div>
           <div class="field"><label>TUTAR (TL)</label><input type="number" id="k_tutar" placeholder="0" inputmode="decimal"></div>
-          <div class="field"><label>FATURA</label><select id="k_fatura"><option>Faturalı</option><option>Faturasız</option></select></div>
+          <div class="field"><label>FATURA</label><select id="k_fatura"><option value="">— Seç</option><option>Faturalı</option><option>Faturasız</option></select></div>
         </div>
         <div class="row-btns"><button class="btn btn-p btn-full" onclick="saveKasaEntry()">Ekle</button></div>
       </div>
@@ -508,7 +508,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
       <div class="field"><label>TÜR</label><select id="kg_edit_tur"><option>Gelir</option><option>Gider</option><option>Giriş</option><option>Çıkış</option><option>Noter</option><option>Devir</option></select></div>
       <div class="field full"><label>AÇIKLAMA</label><input type="text" id="kg_edit_aciklama"></div>
       <div class="field"><label>TUTAR (TL)</label><input type="number" id="kg_edit_tutar" inputmode="decimal"></div>
-      <div class="field"><label>FATURA</label><select id="kg_edit_fatura"><option>Faturalı</option><option>Faturasız</option></select></div>
+      <div class="field"><label>FATURA</label><select id="kg_edit_fatura"><option value="">— Seç</option><option>Faturalı</option><option>Faturasız</option></select></div>
     </div>
     <div class="row-btns">
       <button class="btn btn-p" style="flex:2" onclick="confirmKasaGiderEdit()">💾 Güncelle</button>
@@ -907,20 +907,16 @@ function renderKasa(){
   const gundemK=state.gundem.filter(r=>r.odeme==='Kasa'&&r.tarih?.startsWith(ay));
   const kasaK=state.kasaGider.filter(r=>r.tarih?.startsWith(ay));
 
-  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0);
-  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0);
-  const manuelGelir=kasaK.filter(r=>['Gelir','Noter','Devir'].includes(r.tur)).reduce((s,r)=>s+(r.tutar||0),0);
-  const topGelir=faturasizGelir+faturaliGelir+manuelGelir;
+  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
+  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
   const topGider=kasaK.filter(r=>r.tur==='Gider').reduce((s,r)=>s+(r.tutar||0),0);
-  const gunSonu=kasaK.filter(r=>r.tur==='Giriş').reduce((s,r)=>s+(r.tutar||0),0)-kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
-  const net=topGelir-topGider;
+  const gunSonu=kasaK.filter(r=>['Giriş','Noter','Devir'].includes(r.tur)).reduce((s,r)=>s+(r.tutar||0),0)-kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
 
   document.getElementById('kasaStats').innerHTML=`
     <div class="stat sr"><div class="lbl">Faturasız Gelir</div><div class="val">${fmt(faturasizGelir)} ₺</div></div>
     <div class="stat sg"><div class="lbl">Faturalı Gelir</div><div class="val">${fmt(faturaliGelir)} ₺</div></div>
     <div class="stat sr"><div class="lbl">Gider Toplam</div><div class="val">${fmt(topGider)} ₺</div></div>
     <div class="stat sa"><div class="lbl">Gün Sonu</div><div class="val">${fmt(gunSonu)} ₺</div></div>
-    <div class="stat sp"><div class="lbl">Net</div><div class="val">${fmt(net)} ₺</div></div>
   `;
 
   const byDay={};
