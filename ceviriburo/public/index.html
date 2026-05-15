@@ -652,6 +652,16 @@ async function syncNow() {
       state.noterler   = m.noterler   || [];
       state.cariler    = m.cariler    || [];
     }
+    // noterler eksikse cariler listesinden tamamla
+    if(state.noterler.length===0 && state.cariler.length>0){
+      state.noterler=[...state.cariler];
+      await saveMeta();
+    } else {
+      // cariler'de olup noterler'de olmayan varsa ekle
+      let changed=false;
+      state.cariler.forEach(c=>{ if(!state.noterler.includes(c)){ state.noterler.push(c); changed=true; } });
+      if(changed) await saveMeta();
+    }
     populateSelects();
     renderGundem();
     toast('Veriler yüklendi ✓ ('+state.gundem.length+' kayıt)');
