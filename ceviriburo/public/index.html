@@ -1325,6 +1325,8 @@ async function importEskiBorclar(){
   } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
 }
 window.importEskiBorclar=importEskiBorclar;
+
+function exportBackup(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ceviriburo_yedek_'+today()+'.json'; a.click(); toast('Yedek indirildi');
 }
