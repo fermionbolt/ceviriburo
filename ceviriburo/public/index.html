@@ -35,7 +35,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--sa
 .topbtn:hover{border-color:var(--brd2);color:var(--acc)}
 .topbtn:active{transform:scale(.96)}
 #aktifKullanici.secildi{border-color:rgba(34,211,238,.4);color:var(--acc)}
-.tabs{display:flex;border-bottom:1px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none;background:var(--bg)}
+.tabs{display:flex;border-bottom:1px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none;background:var(--bg);scroll-behavior:smooth}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex-shrink:0;padding:10px 15px;font-size:12px;font-weight:600;font-family:var(--mono);color:var(--txt2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;user-select:none}
 .tab:hover{color:var(--txt)}
@@ -456,7 +456,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
         <div class="card-hd"><div class="card-title">Veri Yönetimi</div></div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <button class="btn btn-g btn-full" onclick="exportBackup()">📦 Yedek İndir (JSON)</button>
-          <button class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
+          <button id="importBtn" class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
         </div>
       </div>
       <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">
@@ -623,6 +623,9 @@ async function init() {
   const k = getAktifKullanici();
   if(k){ document.getElementById('aktifKullanici').value=k; document.getElementById('aktifKullanici').classList.add('secildi'); }
   await syncNow();
+  // Tab bar mouse wheel scroll
+  const tabBar=document.getElementById('tabBar');
+  tabBar.addEventListener('wheel',e=>{e.preventDefault();tabBar.scrollLeft+=e.deltaY;},{passive:false});
 }
 
 async function syncNow() {
@@ -1195,6 +1198,12 @@ function renderAyarlar(){
   const el=document.getElementById('noterMgmt');
   if(!state.noterler.length){el.innerHTML='<div style="font-size:12px;color:var(--txt2);padding:8px 0">Henüz yok</div>';return;}
   el.innerHTML=state.noterler.map((item,i)=>`<div class="mitem"><span>${item}</span><button class="btn btn-r btn-sm" onclick="deleteNoter(${i})">− Sil</button></div>`).join('');
+  // Eski veri zaten aktarıldıysa butonu gizle
+  const btn=document.getElementById('importBtn');
+  if(btn){
+    const zatenVar=state.gundem.some(r=>r.id==='BES3_001'||r.id==='BES27_001');
+    btn.style.display=zatenVar?'none':'';
+  }
 }
 
 function showAddMeta(type){
@@ -1327,6 +1336,9 @@ async function importEskiBorclar(){
     renderGundem(); renderBorc3(); renderBorc27();
     setSyncStatus('ok','hazır');
     toast('Aktarıldı ✓ — Beşiktaş 3: '+b3Data.length+' kayıt, Beşiktaş 27: '+b27Data.length+' kayıt');
+    // Butonu gizle
+    const btn=document.getElementById('importBtn');
+    if(btn)btn.style.display='none';
   } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
 }
 window.importEskiBorclar=importEskiBorclar;
