@@ -623,10 +623,8 @@ async function init() {
   const k = getAktifKullanici();
   if(k){ document.getElementById('aktifKullanici').value=k; document.getElementById('aktifKullanici').classList.add('secildi'); }
   await syncNow();
-  // Tab bar mouse wheel scroll
   const tabBar=document.getElementById('tabBar');
   tabBar.addEventListener('wheel',e=>{e.preventDefault();tabBar.scrollLeft+=e.deltaY;},{passive:false});
-  // Gündem arama
   document.getElementById('gundemSearch').addEventListener('input',()=>renderGundem());
 }
 
@@ -654,12 +652,10 @@ async function syncNow() {
       state.noterler   = m.noterler   || [];
       state.cariler    = m.cariler    || [];
     }
-    // noterler eksikse cariler listesinden tamamla
     if(state.noterler.length===0 && state.cariler.length>0){
       state.noterler=[...state.cariler];
       await saveMeta();
     } else {
-      // cariler'de olup noterler'de olmayan varsa ekle
       let changed=false;
       state.cariler.forEach(c=>{ if(!state.noterler.includes(c)){ state.noterler.push(c); changed=true; } });
       if(changed) await saveMeta();
@@ -887,36 +883,83 @@ function populateKasaAy(){
   if(cur)sel.value=cur;
 }
 
-// Kasa tür mantığı:
-// GELİR → + genel toplama dahil
-// GİDER → - genel toplama dahil
-// GİRİŞ → + hesaplar ama genel toplamda değil, gün sonunda görünür
-// ÇIKIŞ → - hesaplar ama genel toplamda değil
-// NOTER → + genel toplama dahil
-// DEVİR → + genel toplama dahil
-function kasaTurSign(tur){
-  if(['Gelir','Giriş','Noter','Devir'].includes(tur)) return 1;
-  return -1;
-}
-function kasaTurInTotal(tur){
-  return ['Gelir','Gider','Noter','Devir'].includes(tur);
-}
-
 function renderKasa(){
-  const ay=document.getElementById('kasaAySel').value; if(!ay){document.getElementById('kasaStats').innerHTML='';document.getElementById('kasaDays').innerHTML='';return;}
+  const ay=document.getElementById('kasaAySel').value;
+  if(!ay){document.getElementById('kasaStats').innerHTML='';document.getElementById('kasaDays').innerHTML='';return;}
   const gundemK=state.gundem.filter(r=>r.odeme==='Kasa'&&r.tarih?.startsWith(ay));
   const kasaK=state.kasaGider.filter(r=>r.tarih?.startsWith(ay));
 
-  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
-  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
-  const topGider=kasaK.filter(r=>r.tur==='Gider').reduce((s,r)=>s+(r.tutar||0),0);
-  const gunSonu=kasaK.filter(r=>['Giriş','Noter','Devir'].includes(r.tur)).reduce((s,r)=>s+(r.tutar||0),0)-kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
+  // ── Gelir hesapları ──
+  const faturasizGelir = gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)
+                       + kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
+  const faturaliGelir  = gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)
+                       + kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGiris  = kasaK.filter(r=>r.tur==='Giriş').reduce((s,r)=>s+(r.tutar||0),0);
+  const topNoter  = kasaK.filter(r=>r.tur==='Noter').reduce((s,r)=>s+(r.tutar||0),0);
+  const topDevir  = kasaK.filter(r=>r.tur==='Devir').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGelir  = faturasizGelir + faturaliGelir + topGiris + topNoter + topDevir;
+
+  // ── Gider hesapları ──
+  const topGider  = kasaK.filter(r=>r.tur==='Gider').reduce((s,r)=>s+(r.tutar||0),0);
+  const topCikis  = kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGiderToplam = topGider + topCikis;
+
+  // ── Net bakiye ──
+  const gunSonu = topGelir - topGiderToplam;
 
   document.getElementById('kasaStats').innerHTML=`
-    <div class="stat sr"><div class="lbl">Faturasız Gelir</div><div class="val">${fmt(faturasizGelir)} ₺</div></div>
-    <div class="stat sg"><div class="lbl">Faturalı Gelir</div><div class="val">${fmt(faturaliGelir)} ₺</div></div>
-    <div class="stat sr"><div class="lbl">Gider Toplam</div><div class="val">${fmt(topGider)} ₺</div></div>
-    <div class="stat sa"><div class="lbl">Gün Sonu</div><div class="val">${fmt(gunSonu)} ₺</div></div>
+    <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--s2);border:1px solid rgba(52,211,153,.25);border-radius:var(--r2);padding:12px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--grn);font-family:var(--mono);margin-bottom:8px">▲ GELİRLER</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Faturasız Gelir</span>
+            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturasizGelir)} ₺</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Faturalı Gelir</span>
+            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturaliGelir)} ₺</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Giriş</span>
+            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topGiris)} ₺</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Noter</span>
+            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topNoter)} ₺</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Devir</span>
+            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topDevir)} ₺</span>
+          </div>
+          <div style="border-top:1px solid rgba(52,211,153,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span style="color:var(--txt)">Toplam</span>
+            <span style="font-family:var(--mono);color:var(--grn)">${fmt(topGelir)} ₺</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--s2);border:1px solid rgba(248,113,113,.25);border-radius:var(--r2);padding:12px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--red);font-family:var(--mono);margin-bottom:8px">▼ GİDERLER</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Gider</span>
+            <span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topGider)} ₺</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span style="color:var(--txt2)">Çıkış</span>
+            <span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topCikis)} ₺</span>
+          </div>
+          <div style="border-top:1px solid rgba(248,113,113,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+            <span style="color:var(--txt)">Toplam</span>
+            <span style="font-family:var(--mono);color:var(--red)">${fmt(topGiderToplam)} ₺</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="stat ${gunSonu>=0?'sg':'sr'}" style="grid-column:1/-1">
+      <div class="lbl">GÜN SONU · Net Kasa Bakiyesi</div>
+      <div class="val">${gunSonu>=0?'+':''}${fmt(gunSonu)} ₺</div>
+    </div>
   `;
 
   const byDay={};
@@ -1206,7 +1249,6 @@ function renderAyarlar(){
   const el=document.getElementById('noterMgmt');
   if(!state.noterler.length){el.innerHTML='<div style="font-size:12px;color:var(--txt2);padding:8px 0">Henüz yok</div>';return;}
   el.innerHTML=state.noterler.map((item,i)=>`<div class="mitem"><span>${item}</span><button class="btn btn-r btn-sm" onclick="deleteNoter(${i})">− Sil</button></div>`).join('');
-  // Eski veri zaten aktarıldıysa butonu gizle
   const btn=document.getElementById('importBtn');
   if(btn){
     const zatenVar=state.gundem.some(r=>r.id==='BES3_001'||r.id==='BES27_001');
@@ -1335,7 +1377,6 @@ async function importEskiBorclar(){
   setSyncStatus('ing','aktarılıyor...');
   try{
     for(const r of tumData){
-      // Daha önce eklenmiş mi kontrol et
       if(!state.gundem.find(x=>x.id===r.id)){
         await setDoc(doc(db,'gundem',r.id),r);
         state.gundem.unshift(r);
@@ -1344,7 +1385,6 @@ async function importEskiBorclar(){
     renderGundem(); renderBorc3(); renderBorc27();
     setSyncStatus('ok','hazır');
     toast('Aktarıldı ✓ — Beşiktaş 3: '+b3Data.length+' kayıt, Beşiktaş 27: '+b27Data.length+' kayıt');
-    // Butonu gizle
     const btn=document.getElementById('importBtn');
     if(btn)btn.style.display='none';
   } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
