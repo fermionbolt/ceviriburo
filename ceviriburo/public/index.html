@@ -1033,7 +1033,7 @@ function setFsF(f,btn){ fsFilter=f; document.querySelectorAll('#fsFilterBar .fbt
 
 function renderFaturasiz(){
   const list=state.gundem.filter(r=>{
-if(r.fatura!=='Faturasız'||r.odeme!=='Banka') return false;
+if(r.fatura!=='Faturasız'||(r.odeme==='Kasa')) return false;
     if(fsFilter==='beklemede') return r.odemeDurum==='Beklemede'||!r.odemeDurum;
     if(fsFilter==='alindi')    return r.odemeDurum==='Alındı';
     return true;
