@@ -846,7 +846,7 @@ function getFaturalarList(){
 }
 
 function renderFaturalar(){
-  const all=getFaturalarList();
+  const all=getFaturalarList().sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   const FATURA_DURUMLARI=['Fatura Beklemede','Fatura Kesilecek','Tamamlandı'];
   const allFat=state.gundem.filter(r=>r.fatura==='Faturalı'&&FATURA_DURUMLARI.includes(r.durum));
   const bekleyen=allFat.filter(r=>r.durum==='Fatura Beklemede'||r.durum==='Fatura Kesilecek');
@@ -1037,7 +1037,7 @@ if(r.fatura!=='Faturasız'||(r.odeme==='Kasa')) return false;
     if(fsFilter==='beklemede') return r.odemeDurum==='Beklemede'||!r.odemeDurum;
     if(fsFilter==='alindi')    return r.odemeDurum==='Alındı';
     return true;
-  });
+}).sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   const tercumeToplam=list.reduce((s,r)=>s+(r.bedel||0),0);
   const noterToplam=list.reduce((s,r)=>s+(r.noterBedel||0),0);
   const kuryeToplam=list.reduce((s,r)=>s+(r.kurye||0),0);
@@ -1092,6 +1092,7 @@ function renderCariDetail(){
   let recs=getCariRecs(ay);
   if(cariFilter==='beklemede') recs=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum);
   else if(cariFilter==='alindi') recs=recs.filter(r=>r.odemeDurum==='Alındı');
+  recs.sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   const top=recs.reduce((s,r)=>s+(r.bedel||0),0);
   document.getElementById('cariTotal').textContent=fmt(top)+' ₺';
   const bekleyen=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0),0);
