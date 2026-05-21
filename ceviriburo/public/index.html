@@ -1093,19 +1093,30 @@ function renderCariDetail(){
   if(cariFilter==='beklemede') recs=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum);
   else if(cariFilter==='alindi') recs=recs.filter(r=>r.odemeDurum==='Alındı');
   recs.sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
-  const top=recs.reduce((s,r)=>s+(r.bedel||0),0);
-  document.getElementById('cariTotal').textContent=fmt(top)+' ₺';
-  const bekleyen=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0),0);
-  const alindi=recs.filter(r=>r.odemeDurum==='Alındı').reduce((s,r)=>s+(r.bedel||0),0);
+
+  // Hesaplamalar
+  const kayitSayisi   = recs.length;
+  const tercumeBedeli = recs.reduce((s,r)=>s+(r.bedel||0),0);
+  const noterBedeli   = recs.reduce((s,r)=>s+(r.noterBedel||0),0);
+  const kuryeBedeli   = recs.reduce((s,r)=>s+(r.kurye||0),0);
+  const genelToplam   = tercumeBedeli + noterBedeli + kuryeBedeli;
+  const alinan        = recs.filter(r=>r.odemeDurum==='Alındı').reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
+  const bekleyen      = recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
+
+  // Üstteki toplam (sadece tercüme bedeli mi, genel toplam mı?)
+  document.getElementById('cariTotal').textContent=fmt(genelToplam)+' ₺';
+
   document.getElementById('cariStats').innerHTML=`
-    <div class="stat sa"><div class="lbl">İşlem</div><div class="val">${recs.length}</div></div>
-    <div class="stat sp"><div class="lbl">Toplam</div><div class="val">${fmt(top)} ₺</div></div>
-    <div class="stat sy"><div class="lbl">Bekleyen</div><div class="val">${fmt(bekleyen)} ₺</div></div>
-    <div class="stat sg"><div class="lbl">Alınan</div><div class="val">${fmt(alindi)} ₺</div></div>
+    <div class="stat sa"><div class="lbl">Kayıt Sayısı</div><div class="val">${kayitSayisi}</div></div>
+    <div class="stat sp"><div class="lbl">Tercüme Bedeli</div><div class="val">${fmt(tercumeBedeli)} ₺</div></div>
+    <div class="stat sy"><div class="lbl">Noter Bedeli</div><div class="val">${fmt(noterBedeli)} ₺</div></div>
+    <div class="stat sa"><div class="lbl">Kurye Bedeli</div><div class="val">${fmt(kuryeBedeli)} ₺</div></div>
+    <div class="stat sg"><div class="lbl">Alınan Ödeme Toplam</div><div class="val">${fmt(alinan)} ₺</div></div>
+    <div class="stat sy"><div class="lbl">Bekleyen Ödeme Toplam</div><div class="val">${fmt(bekleyen)} ₺</div></div>
   `;
+
   document.getElementById('cariRecords').innerHTML=recs.length?recs.map(r=>recCard(r)).join(''):'<div class="empty">Bu cari için kayıt yok</div>';
 }
-
 function showAddCari(){ addModalType='cari'; document.getElementById('addModal_title').textContent='Yeni Cari'; document.getElementById('addModal_label').textContent='CARİ ADI'; document.getElementById('addModal_input').placeholder='Cari adı...'; document.getElementById('addModal_input').value=''; document.getElementById('addModal').style.display='flex'; }
 
 async function confirmDeleteCari(){
