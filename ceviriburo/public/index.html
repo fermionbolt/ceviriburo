@@ -460,7 +460,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
         </div>
       </div>
       <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">
-        ÇeviriBüro v5.0 · Buz Cyan
+        ÇeviriBüro v5.1 · Buz Cyan
       </div>
     </div>
 
@@ -592,7 +592,6 @@ let state = {
 let gFilter = 'tumu', fatFilter = 'tumu', fsFilter = 'tumu', cariFilter = 'tumu';
 let activeCari = null, editingId = null, addModalType = null;
 
-// ── UTILS ────────────────────────────────────────────────
 function uid()   { return Date.now()+'_'+Math.random().toString(36).slice(2,6); }
 function today() { return new Date().toISOString().split('T')[0]; }
 function fmt(n)  { return (parseFloat(n)||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -604,7 +603,6 @@ function fmtDateTime(iso){ if(!iso)return''; try{ const d=new Date(iso); return 
 function toast(msg,dur=2800){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),dur); }
 function setSyncStatus(s,l){ document.getElementById('syncDot').className='sync-dot '+s; document.getElementById('syncLabel').textContent=l||s; }
 
-// ── KULLANICI ─────────────────────────────────────────────
 function kullaniciSec(val){
   if(val){ localStorage.setItem(KULLANICI_KEY,val); document.getElementById('aktifKullanici').classList.add('secildi'); }
   else   { localStorage.removeItem(KULLANICI_KEY); document.getElementById('aktifKullanici').classList.remove('secildi'); }
@@ -614,7 +612,6 @@ function kullaniciKontrol(){
   if(!getAktifKullanici()){ toast('⚠ Lütfen sağ üstten kişi seçin'); document.getElementById('aktifKullanici').style.borderColor='var(--red)'; setTimeout(()=>document.getElementById('aktifKullanici').style.borderColor='',2000); return false; } return true;
 }
 
-// ── INIT & SYNC ───────────────────────────────────────────
 async function init() {
   document.getElementById('f_tarih').value = today();
   document.getElementById('k_tarih').value = today();
@@ -632,25 +629,23 @@ async function syncNow() {
   setSyncStatus('ing','yükleniyor...');
   document.getElementById('loadText').textContent = 'Firestore\'dan veriler alınıyor...';
   try {
-    const [gundemSnap, kasaSnap, metaDoc, ogSnap, anSnap, b3Snap, b27Snap] = await Promise.all([
+    // ── ADIM 1 DEĞİŞİKLİĞİ: borc3 ve borc27 ölü okumaları kaldırıldı ──
+    const [gundemSnap, kasaSnap, metaDoc, ogSnap, anSnap] = await Promise.all([
       getDocs(collection(db,'gundem')),
       getDocs(collection(db,'kasaGider')),
       getDoc(doc(db,'meta','config')),
       getDocs(collection(db,'ortakGider')),
-      getDocs(collection(db,'aysonuNotlar')),
-      getDocs(collection(db,'borc3')),
-      getDocs(collection(db,'borc27'))
+      getDocs(collection(db,'aysonuNotlar'))
     ]);
     state.gundem      = gundemSnap.docs.map(d=>d.data());
     state.kasaGider   = kasaSnap.docs.map(d=>d.data());
     state.ortakGider  = ogSnap.docs.map(d=>d.data());
     state.aysonuNotlar= anSnap.docs.map(d=>d.data());
-    state.borc3       = b3Snap.docs.map(d=>d.data());
-    state.borc27      = b27Snap.docs.map(d=>d.data());
+    // borc3 ve borc27 state dizileri boş kalır; renderBorc3/27 gundem'den okur
     if(metaDoc.exists()){
       const m = metaDoc.data();
-      state.noterler   = m.noterler   || [];
-      state.cariler    = m.cariler    || [];
+      state.noterler = m.noterler || [];
+      state.cariler  = m.cariler  || [];
     }
     if(state.noterler.length===0 && state.cariler.length>0){
       state.noterler=[...state.cariler];
@@ -682,7 +677,6 @@ function populateSelects(){
   });
 }
 
-// ── KDV ──────────────────────────────────────────────────
 function calcKdv(){
   const b=parseFloat(gv('f_bedel'))||0; const k=gv('f_kdv');
   const wrap=document.getElementById('f_kdvt_wrap');
@@ -697,7 +691,6 @@ function calcKdvEdit(){
   else sv('e_kdvt','');
 }
 
-// ── KAYDET ───────────────────────────────────────────────
 async function saveRecord(){
   if(!kullaniciKontrol())return;
   const islem=gv('f_islem'); if(!islem){toast('⚠ İşlem tanımı gerekli');return;}
@@ -729,7 +722,6 @@ function clearForm(){
   sv('f_tarih',today());
 }
 
-// ── GÜNDEM RENDER ─────────────────────────────────────────
 function setGF(f,btn){ gFilter=f; document.querySelectorAll('#gFilterBar .fbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderGundem(); }
 
 function getGundemFiltered(){
@@ -778,7 +770,6 @@ function recCard(r){
   </div>`;
 }
 
-// ── EDİT MODAL ────────────────────────────────────────────
 function openEdit(id){
   const r=state.gundem.find(x=>String(x.id)===String(id)); if(!r)return;
   editingId=id;
@@ -830,7 +821,6 @@ async function confirmDelete(){
 
 function closeModal(id){ document.getElementById(id).style.display='none'; editingId=null; addModalType=null; }
 
-// ── FATURALAR ─────────────────────────────────────────────
 function setFatF(f,btn){ fatFilter=f; document.querySelectorAll('#fatFilterBar .fbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderFaturalar(); }
 
 function getFaturalarList(){
@@ -861,7 +851,6 @@ function renderFaturalar(){
   el.innerHTML=all.length?all.map(r=>recCard(r)).join(''):'<div class="empty">✓ Kayıt yok</div>';
 }
 
-// ── KASA ──────────────────────────────────────────────────
 async function saveKasaEntry(){
   if(!kullaniciKontrol())return;
   const aciklama=gv('k_aciklama'); const tutar=parseFloat(gv('k_tutar'))||0;
@@ -888,99 +877,47 @@ function renderKasa(){
   if(!ay){document.getElementById('kasaStats').innerHTML='';document.getElementById('kasaDays').innerHTML='';return;}
   const gundemK=state.gundem.filter(r=>r.odeme==='Kasa'&&r.tarih?.startsWith(ay));
   const kasaK=state.kasaGider.filter(r=>r.tarih?.startsWith(ay));
-
-  // ── Gelir hesapları ──
-  const faturasizGelir = gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)
-                       + kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
-  const faturaliGelir  = gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)
-                       + kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
-  const topGiris  = kasaK.filter(r=>r.tur==='Giriş').reduce((s,r)=>s+(r.tutar||0),0);
-  const topNoter  = kasaK.filter(r=>r.tur==='Noter').reduce((s,r)=>s+(r.tutar||0),0);
-  const topDevir  = kasaK.filter(r=>r.tur==='Devir').reduce((s,r)=>s+(r.tutar||0),0);
-  const topGelir  = faturasizGelir + faturaliGelir + topGiris + topNoter + topDevir;
-
-  // ── Gider hesapları ──
-  const topGider  = kasaK.filter(r=>r.tur==='Gider').reduce((s,r)=>s+(r.tutar||0),0);
-  const topCikis  = kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
-  const topGiderToplam = topGider + topCikis;
-
-  // ── Net bakiye ──
-  const gunSonu = topGelir - topGiderToplam;
-
+  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
+  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGiris=kasaK.filter(r=>r.tur==='Giriş').reduce((s,r)=>s+(r.tutar||0),0);
+  const topNoter=kasaK.filter(r=>r.tur==='Noter').reduce((s,r)=>s+(r.tutar||0),0);
+  const topDevir=kasaK.filter(r=>r.tur==='Devir').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGelir=faturasizGelir+faturaliGelir+topGiris+topNoter+topDevir;
+  const topGider=kasaK.filter(r=>r.tur==='Gider').reduce((s,r)=>s+(r.tutar||0),0);
+  const topCikis=kasaK.filter(r=>r.tur==='Çıkış').reduce((s,r)=>s+(r.tutar||0),0);
+  const topGiderToplam=topGider+topCikis;
+  const gunSonu=topGelir-topGiderToplam;
   document.getElementById('kasaStats').innerHTML=`
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:var(--s2);border:1px solid rgba(52,211,153,.25);border-radius:var(--r2);padding:12px">
         <div style="font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--grn);font-family:var(--mono);margin-bottom:8px">▲ GELİRLER</div>
         <div style="display:flex;flex-direction:column;gap:5px">
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Faturasız Gelir</span>
-            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturasizGelir)} ₺</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Faturalı Gelir</span>
-            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturaliGelir)} ₺</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Giriş</span>
-            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topGiris)} ₺</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Noter</span>
-            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topNoter)} ₺</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Devir</span>
-            <span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topDevir)} ₺</span>
-          </div>
-          <div style="border-top:1px solid rgba(52,211,153,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600">
-            <span style="color:var(--txt)">Toplam</span>
-            <span style="font-family:var(--mono);color:var(--grn)">${fmt(topGelir)} ₺</span>
-          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Faturasız Gelir</span><span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturasizGelir)} ₺</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Faturalı Gelir</span><span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(faturaliGelir)} ₺</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Giriş</span><span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topGiris)} ₺</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Noter</span><span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topNoter)} ₺</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Devir</span><span style="font-family:var(--mono);color:var(--grn);font-weight:600">${fmt(topDevir)} ₺</span></div>
+          <div style="border-top:1px solid rgba(52,211,153,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600"><span style="color:var(--txt)">Toplam</span><span style="font-family:var(--mono);color:var(--grn)">${fmt(topGelir)} ₺</span></div>
         </div>
       </div>
       <div style="background:var(--s2);border:1px solid rgba(248,113,113,.25);border-radius:var(--r2);padding:12px">
         <div style="font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--red);font-family:var(--mono);margin-bottom:8px">▼ GİDERLER</div>
         <div style="display:flex;flex-direction:column;gap:5px">
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Gider</span>
-            <span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topGider)} ₺</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px">
-            <span style="color:var(--txt2)">Çıkış</span>
-            <span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topCikis)} ₺</span>
-          </div>
-          <div style="border-top:1px solid rgba(248,113,113,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600">
-            <span style="color:var(--txt)">Toplam</span>
-            <span style="font-family:var(--mono);color:var(--red)">${fmt(topGiderToplam)} ₺</span>
-          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Gider</span><span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topGider)} ₺</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--txt2)">Çıkış</span><span style="font-family:var(--mono);color:var(--red);font-weight:600">${fmt(topCikis)} ₺</span></div>
+          <div style="border-top:1px solid rgba(248,113,113,.2);margin-top:4px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600"><span style="color:var(--txt)">Toplam</span><span style="font-family:var(--mono);color:var(--red)">${fmt(topGiderToplam)} ₺</span></div>
         </div>
       </div>
     </div>
     <div class="stat ${gunSonu>=0?'sg':'sr'}" style="grid-column:1/-1">
       <div class="lbl">GÜN SONU · Net Kasa Bakiyesi</div>
       <div class="val">${gunSonu>=0?'+':''}${fmt(gunSonu)} ₺</div>
-    </div>
-  `;
-
+    </div>`;
   const byDay={};
-  gundemK.forEach(r=>{
-    if(!r.tarih)return;
-    if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]};
-    byDay[r.tarih].gelir.push({lbl:r.islem,tutar:r.bedel,sub:(r.fatura||'')+' · '+(r.noter||''),gundemId:String(r.id)});
-  });
-  kasaK.forEach(r=>{
-    if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]};
-    const isPos=['Gelir','Giriş','Noter','Devir'].includes(r.tur);
-    const entry={lbl:r.aciklama,tutar:r.tutar,sub:r.fatura+' · '+r.tur,id:r.id};
-    byDay[r.tarih][isPos?'gelir':'gider'].push(entry);
-  });
-
-  let cum=0;const cumMap={};
-  Object.keys(byDay).sort().forEach(d=>{
-    cum+=byDay[d].gelir.reduce((s,r)=>s+r.tutar,0)-byDay[d].gider.reduce((s,r)=>s+r.tutar,0);
-    cumMap[d]=cum;
-  });
-
+  gundemK.forEach(r=>{ if(!r.tarih)return; if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]}; byDay[r.tarih].gelir.push({lbl:r.islem,tutar:r.bedel,sub:(r.fatura||'')+' · '+(r.noter||''),gundemId:String(r.id)}); });
+  kasaK.forEach(r=>{ if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]}; const isPos=['Gelir','Giriş','Noter','Devir'].includes(r.tur); byDay[r.tarih][isPos?'gelir':'gider'].push({lbl:r.aciklama,tutar:r.tutar,sub:r.fatura+' · '+r.tur,id:r.id}); });
+  let cum=0; const cumMap={};
+  Object.keys(byDay).sort().forEach(d=>{ cum+=byDay[d].gelir.reduce((s,r)=>s+r.tutar,0)-byDay[d].gider.reduce((s,r)=>s+r.tutar,0); cumMap[d]=cum; });
   const days=Object.keys(byDay).sort().reverse();
   document.getElementById('kasaDays').innerHTML=days.map(d=>{
     const gSum=byDay[d].gelir.reduce((s,r)=>s+r.tutar,0);
@@ -1007,12 +944,7 @@ function openKasaGiderEdit(id){
 
 async function confirmKasaGiderEdit(){
   const id=gv('kg_edit_id'); const idx=state.kasaGider.findIndex(r=>r.id===id); if(idx===-1)return;
-  state.kasaGider[idx]=Object.assign({},state.kasaGider[idx],{
-    tarih:gv('kg_edit_tarih'), aciklama:gv('kg_edit_aciklama'),
-    tutar:parseFloat(gv('kg_edit_tutar'))||0,
-    tur:document.getElementById('kg_edit_tur').value,
-    fatura:document.getElementById('kg_edit_fatura').value
-  });
+  state.kasaGider[idx]=Object.assign({},state.kasaGider[idx],{tarih:gv('kg_edit_tarih'),aciklama:gv('kg_edit_aciklama'),tutar:parseFloat(gv('kg_edit_tutar'))||0,tur:document.getElementById('kg_edit_tur').value,fatura:document.getElementById('kg_edit_fatura').value});
   renderKasa(); closeModal('kasaGiderEditModal');
   toast('Güncelleniyor...'); setSyncStatus('ing','kaydediliyor...');
   try{ await setDoc(doc(db,'kasaGider',state.kasaGider[idx].id),state.kasaGider[idx]); setSyncStatus('ok','hazır'); toast('Güncellendi ✓'); }
@@ -1028,16 +960,15 @@ async function deleteKasaEntry(id){
   catch(e){ setSyncStatus('err','hata'); toast('Silme hatası: '+e.message); }
 }
 
-// ── FATURASIZ ─────────────────────────────────────────────
 function setFsF(f,btn){ fsFilter=f; document.querySelectorAll('#fsFilterBar .fbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderFaturasiz(); }
 
 function renderFaturasiz(){
   const list=state.gundem.filter(r=>{
-if(r.fatura!=='Faturasız'||(r.odeme==='Kasa')) return false;
+    if(r.fatura!=='Faturasız'||(r.odeme==='Kasa')) return false;
     if(fsFilter==='beklemede') return r.odemeDurum==='Beklemede'||!r.odemeDurum;
     if(fsFilter==='alindi')    return r.odemeDurum==='Alındı';
     return true;
-}).sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
+  }).sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   const tercumeToplam=list.reduce((s,r)=>s+(r.bedel||0),0);
   const noterToplam=list.reduce((s,r)=>s+(r.noterBedel||0),0);
   const kuryeToplam=list.reduce((s,r)=>s+(r.kurye||0),0);
@@ -1052,7 +983,6 @@ if(r.fatura!=='Faturasız'||(r.odeme==='Kasa')) return false;
   el.innerHTML=list.length?list.map(r=>recCard(r)).join(''):'<div class="empty">Faturasız işlem yok</div>';
 }
 
-// ── CARİLER ───────────────────────────────────────────────
 function setCariF(f,btn){ cariFilter=f; document.querySelectorAll('#cariFbar .fbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderCariDetail(); }
 
 function renderCariler(){
@@ -1093,30 +1023,24 @@ function renderCariDetail(){
   if(cariFilter==='beklemede') recs=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum);
   else if(cariFilter==='alindi') recs=recs.filter(r=>r.odemeDurum==='Alındı');
   recs.sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
-
-  // Hesaplamalar
-  const kayitSayisi   = recs.length;
-  const tercumeBedeli = recs.reduce((s,r)=>s+(r.bedel||0),0);
-  const noterBedeli   = recs.reduce((s,r)=>s+(r.noterBedel||0),0);
-  const kuryeBedeli   = recs.reduce((s,r)=>s+(r.kurye||0),0);
-  const genelToplam   = tercumeBedeli + noterBedeli + kuryeBedeli;
-  const alinan        = recs.filter(r=>r.odemeDurum==='Alındı').reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
-  const bekleyen      = recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
-
-  // Üstteki toplam (sadece tercüme bedeli mi, genel toplam mı?)
+  const kayitSayisi=recs.length;
+  const tercumeBedeli=recs.reduce((s,r)=>s+(r.bedel||0),0);
+  const noterBedeli=recs.reduce((s,r)=>s+(r.noterBedel||0),0);
+  const kuryeBedeli=recs.reduce((s,r)=>s+(r.kurye||0),0);
+  const genelToplam=tercumeBedeli+noterBedeli+kuryeBedeli;
+  const alinan=recs.filter(r=>r.odemeDurum==='Alındı').reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
+  const bekleyen=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
   document.getElementById('cariTotal').textContent=fmt(genelToplam)+' ₺';
-
   document.getElementById('cariStats').innerHTML=`
     <div class="stat sa"><div class="lbl">Kayıt Sayısı</div><div class="val">${kayitSayisi}</div></div>
     <div class="stat sp"><div class="lbl">Tercüme Bedeli</div><div class="val">${fmt(tercumeBedeli)} ₺</div></div>
     <div class="stat sy"><div class="lbl">Noter Bedeli</div><div class="val">${fmt(noterBedeli)} ₺</div></div>
     <div class="stat sa"><div class="lbl">Kurye Bedeli</div><div class="val">${fmt(kuryeBedeli)} ₺</div></div>
     <div class="stat sg"><div class="lbl">Alınan Ödeme Toplam</div><div class="val">${fmt(alinan)} ₺</div></div>
-    <div class="stat sy"><div class="lbl">Bekleyen Ödeme Toplam</div><div class="val">${fmt(bekleyen)} ₺</div></div>
-  `;
-
+    <div class="stat sy"><div class="lbl">Bekleyen Ödeme Toplam</div><div class="val">${fmt(bekleyen)} ₺</div></div>`;
   document.getElementById('cariRecords').innerHTML=recs.length?recs.map(r=>recCard(r)).join(''):'<div class="empty">Bu cari için kayıt yok</div>';
 }
+
 function showAddCari(){ addModalType='cari'; document.getElementById('addModal_title').textContent='Yeni Cari'; document.getElementById('addModal_label').textContent='CARİ ADI'; document.getElementById('addModal_input').placeholder='Cari adı...'; document.getElementById('addModal_input').value=''; document.getElementById('addModal').style.display='flex'; }
 
 async function confirmDeleteCari(){
@@ -1125,7 +1049,6 @@ async function confirmDeleteCari(){
   document.getElementById('cariDetail').style.display='none'; renderCariler(); toast('Silindi'); await saveMeta();
 }
 
-// ── BEŞİKTAŞ BORÇ ─────────────────────────────────────────
 function renderBorc3(){
   const list=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3').sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   document.getElementById('b3_count').textContent=list.length;
@@ -1159,7 +1082,6 @@ function borcCard(r){
   </div>`;
 }
 
-// ── ORTAK GİDER ───────────────────────────────────────────
 async function saveOrtakGider(){
   if(!kullaniciKontrol())return;
   const aciklama=gv('og_aciklama'); const tutar=parseFloat(gv('og_tutar'))||0;
@@ -1178,12 +1100,7 @@ function renderOrtakGider(){
   document.getElementById('og_count').textContent=list.length;
   document.getElementById('og_total').textContent=fmt(list.reduce((s,r)=>s+(r.tutar||0),0))+' ₺';
   const el=document.getElementById('ortakGiderList');
-  el.innerHTML=list.length?list.map(r=>`<div class="borc-rec">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div><div class="borc-rec-title">${r.aciklama||'—'}</div><div class="borc-rec-sub">${fmtD(r.tarih)}${r.kaydeden?' · '+r.kaydeden:''}</div></div>
-      <div style="text-align:right"><div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--red)">${fmt(r.tutar)} ₺</div><button class="btn btn-g btn-sm" style="margin-top:6px" onclick="openOgEdit('${r.id}')">Düzenle</button></div>
-    </div>
-  </div>`).join(''):'<div class="empty">Kayıt yok</div>';
+  el.innerHTML=list.length?list.map(r=>`<div class="borc-rec"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="borc-rec-title">${r.aciklama||'—'}</div><div class="borc-rec-sub">${fmtD(r.tarih)}${r.kaydeden?' · '+r.kaydeden:''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--red)">${fmt(r.tutar)} ₺</div><button class="btn btn-g btn-sm" style="margin-top:6px" onclick="openOgEdit('${r.id}')">Düzenle</button></div></div></div>`).join(''):'<div class="empty">Kayıt yok</div>';
 }
 
 function openOgEdit(id){
@@ -1209,7 +1126,6 @@ async function deleteOgEntry(id){
   catch(e){ toast('Hata: '+e.message); }
 }
 
-// ── AY SONU NOTLAR ────────────────────────────────────────
 async function saveAySonuNot(){
   if(!kullaniciKontrol())return;
   const aciklama=gv('an_aciklama'); if(!aciklama){toast('Not gerekli');return;}
@@ -1225,12 +1141,7 @@ async function saveAySonuNot(){
 function renderAySonuNotlar(){
   const list=state.aysonuNotlar.sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
   const el=document.getElementById('aysonuNotlarList');
-  el.innerHTML=list.length?list.map(r=>`<div class="note-rec">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div><div class="note-rec-date">${fmtD(r.tarih)}${r.kaydeden?' · '+r.kaydeden:''}</div><div class="note-rec-text">${r.aciklama}</div></div>
-      <button class="btn btn-g btn-sm" onclick="openAnEdit('${r.id}')">Düzenle</button>
-    </div>
-  </div>`).join(''):'<div class="empty">Not yok</div>';
+  el.innerHTML=list.length?list.map(r=>`<div class="note-rec"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="note-rec-date">${fmtD(r.tarih)}${r.kaydeden?' · '+r.kaydeden:''}</div><div class="note-rec-text">${r.aciklama}</div></div><button class="btn btn-g btn-sm" onclick="openAnEdit('${r.id}')">Düzenle</button></div></div>`).join(''):'<div class="empty">Not yok</div>';
 }
 
 function openAnEdit(id){
@@ -1256,16 +1167,12 @@ async function deleteAnEntry(id){
   catch(e){ toast('Hata: '+e.message); }
 }
 
-// ── AYARLAR ───────────────────────────────────────────────
 function renderAyarlar(){
   const el=document.getElementById('noterMgmt');
   if(!state.noterler.length){el.innerHTML='<div style="font-size:12px;color:var(--txt2);padding:8px 0">Henüz yok</div>';return;}
   el.innerHTML=state.noterler.map((item,i)=>`<div class="mitem"><span>${item}</span><button class="btn btn-r btn-sm" onclick="deleteNoter(${i})">− Sil</button></div>`).join('');
   const btn=document.getElementById('importBtn');
-  if(btn){
-    const zatenVar=state.gundem.some(r=>r.id==='BES3_001'||r.id==='BES27_001');
-    btn.style.display=zatenVar?'none':'';
-  }
+  if(btn){ const zatenVar=state.gundem.some(r=>r.id==='BES3_001'||r.id==='BES27_001'); btn.style.display=zatenVar?'none':''; }
 }
 
 function showAddMeta(type){
@@ -1279,13 +1186,8 @@ function showAddMeta(type){
 
 async function confirmAdd(){
   const val=gv('addModal_input'); if(!val){toast('Ad gerekli');return;}
-  if(addModalType==='noter'){
-    if(state.noterler.includes(val)){toast('Zaten var');return;}
-    state.noterler.push(val);
-  } else if(addModalType==='cari'){
-    if(state.cariler.includes(val)){toast('Zaten var');return;}
-    state.cariler.push(val);
-  }
+  if(addModalType==='noter'){ if(state.noterler.includes(val)){toast('Zaten var');return;} state.noterler.push(val); }
+  else if(addModalType==='cari'){ if(state.cariler.includes(val)){toast('Zaten var');return;} state.cariler.push(val); }
   closeModal('addModal'); populateSelects();
   if(addModalType==='cari') renderCariler(); else renderAyarlar();
   toast(val+' eklendi'); await saveMeta();
@@ -1302,7 +1204,6 @@ async function saveMeta(){
   catch(e){ setSyncStatus('err','hata'); toast('Meta kayıt hatası: '+e.message); }
 }
 
-// ── EXPORT ────────────────────────────────────────────────
 function exportCSV(tab){
   let rows=[], headers=[], filename='ceviriburo_'+tab+'_'+today()+'.csv';
   if(tab==='gundem'||tab==='faturalar'||tab==='faturasiz'){
@@ -1339,35 +1240,28 @@ function exportCSV(tab){
 }
 
 function exportPDF(tab){
-  let data=[], title='', cols=[], filename='';
+  let data=[], title='', cols=[];
   if(tab==='gundem'){data=getGundemFiltered();title='Gündem';cols=['Tarih','İşlem','Noter','Fatura','Durum','Bedel','Ödeme'];}
   else if(tab==='faturalar'){data=getFaturalarList();title='Faturalar';cols=['Tarih','İşlem','Durum','Bedel','Ödeme Durumu'];}
   else if(tab==='faturasiz'){data=state.gundem.filter(r=>r.fatura==='Faturasız');title='Faturasız';cols=['Tarih','İşlem','Bedel','Kurye','Ödeme','Ödeme Durumu'];}
-  else if(tab==='kasa'){
-    const ay=document.getElementById('kasaAySel').value;
-    data=state.kasaGider.filter(r=>!ay||r.tarih?.startsWith(ay));
-    title='Kasa'; cols=['Tarih','Tür','Açıklama','Tutar'];
-  }
+  else if(tab==='kasa'){const ay=document.getElementById('kasaAySel').value;data=state.kasaGider.filter(r=>!ay||r.tarih?.startsWith(ay));title='Kasa';cols=['Tarih','Tür','Açıklama','Tutar'];}
   else if(tab==='cariler'){data=activeCari?getCariRecs('all'):[];title='Cariler - '+(activeCari||'');cols=['Tarih','İşlem','Bedel','Ödeme Durumu'];}
   else if(tab==='borc3'){data=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3');title='Beşiktaş 3 Borç';cols=['Tarih','İşlem','Noter Bedeli'];}
   else if(tab==='borc27'){data=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27');title='Beşiktaş 27 Borç';cols=['Tarih','İşlem','Noter Bedeli'];}
   else if(tab==='ortakgider'){data=state.ortakGider;title='Ortak Gider';cols=['Tarih','Açıklama','Tutar'];}
   else if(tab==='aysonunotlar'){data=state.aysonuNotlar;title='Ay Sonu Notlar';cols=['Tarih','Açıklama'];}
-
   if(!data.length){toast('Dışa aktarılacak kayıt yok');return;}
-
-  function getRow(r,tab){
-    if(tab==='gundem') return[fmtD(r.tarih),r.islem||'',r.noter||'',r.fatura||'',r.durum||'',fmt(r.bedel)+' ₺',r.odeme||''];
-    if(tab==='faturalar') return[fmtD(r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
-    if(tab==='faturasiz') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',fmt(r.kurye)+' ₺',r.odeme||'',r.odemeDurum||''];
-    if(tab==='kasa') return[fmtD(r.tarih),r.tur||'',r.aciklama||'',fmt(r.tutar)+' ₺'];
-    if(tab==='cariler') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
-    if(tab==='borc3'||tab==='borc27') return[fmtD(r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
-    if(tab==='ortakgider') return[fmtD(r.tarih),r.aciklama||'',fmt(r.tutar)+' ₺'];
-    if(tab==='aysonunotlar') return[fmtD(r.tarih),r.aciklama||''];
+  function getRow(r,t){
+    if(t==='gundem') return[fmtD(r.tarih),r.islem||'',r.noter||'',r.fatura||'',r.durum||'',fmt(r.bedel)+' ₺',r.odeme||''];
+    if(t==='faturalar') return[fmtD(r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
+    if(t==='faturasiz') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',fmt(r.kurye)+' ₺',r.odeme||'',r.odemeDurum||''];
+    if(t==='kasa') return[fmtD(r.tarih),r.tur||'',r.aciklama||'',fmt(r.tutar)+' ₺'];
+    if(t==='cariler') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
+    if(t==='borc3'||t==='borc27') return[fmtD(r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
+    if(t==='ortakgider') return[fmtD(r.tarih),r.aciklama||'',fmt(r.tutar)+' ₺'];
+    if(t==='aysonunotlar') return[fmtD(r.tarih),r.aciklama||''];
     return[];
   }
-
   const rows=data.map(r=>getRow(r,tab).map(c=>`<td>${c}</td>`).join(''));
   const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial;font-size:10px;padding:24px;color:#111}h2{font-size:16px;margin-bottom:4px}p{color:#666;font-size:10px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#080f14;color:#22d3ee;padding:7px 8px;text-align:left;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}</style></head><body><h2>ÇeviriBüro — ${title}</h2><p>${new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'})} · ${data.length} kayıt</p><table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r}</tr>`).join('')}</table></body></html>`;
   const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600);
@@ -1389,16 +1283,12 @@ async function importEskiBorclar(){
   setSyncStatus('ing','aktarılıyor...');
   try{
     for(const r of tumData){
-      if(!state.gundem.find(x=>x.id===r.id)){
-        await setDoc(doc(db,'gundem',r.id),r);
-        state.gundem.unshift(r);
-      }
+      if(!state.gundem.find(x=>x.id===r.id)){ await setDoc(doc(db,'gundem',r.id),r); state.gundem.unshift(r); }
     }
     renderGundem(); renderBorc3(); renderBorc27();
     setSyncStatus('ok','hazır');
     toast('Aktarıldı ✓ — Beşiktaş 3: '+b3Data.length+' kayıt, Beşiktaş 27: '+b27Data.length+' kayıt');
-    const btn=document.getElementById('importBtn');
-    if(btn)btn.style.display='none';
+    const btn=document.getElementById('importBtn'); if(btn)btn.style.display='none';
   } catch(e){ setSyncStatus('err','hata'); toast('Hata: '+e.message); }
 }
 window.importEskiBorclar=importEskiBorclar;
@@ -1408,7 +1298,6 @@ function exportBackup(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ceviriburo_yedek_'+today()+'.json'; a.click(); toast('Yedek indirildi');
 }
 
-// ── TABS ──────────────────────────────────────────────────
 const TABS=['gundem','faturalar','kasa','faturasiz','cariler','borc3','borc27','ortakgider','aysonunotlar','ayarlar'];
 let activeTab='gundem';
 
@@ -1430,7 +1319,6 @@ function openTab(tab){
   if(tab==='gundem'){renderGundem();}
 }
 
-// ── GLOBAL EXPOSE ─────────────────────────────────────────
 window.kullaniciSec=kullaniciSec; window.syncNow=syncNow; window.openTab=openTab;
 window.clearForm=clearForm; window.saveRecord=saveRecord; window.calcKdv=calcKdv; window.calcKdvEdit=calcKdvEdit;
 window.setGF=setGF; window.openEdit=openEdit; window.confirmSaveEdit=confirmSaveEdit; window.confirmDelete=confirmDelete;
