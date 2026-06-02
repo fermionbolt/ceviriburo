@@ -151,7 +151,6 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
 .note-rec{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);padding:12px;margin-bottom:8px}
 .note-rec-date{font-size:11px;color:var(--txt3);font-family:var(--mono);margin-bottom:4px}
 .note-rec-text{font-size:13px;color:var(--txt)}
-/* ── AY/YIL FİLTRE SATIRI ── */
 .ay-filtre{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
 .ay-filtre select{width:auto;font-size:11px;padding:5px 24px 5px 8px;background:var(--s2);border:1px solid var(--brd);border-radius:var(--r2);color:var(--txt);font-family:var(--mono)}
 .filtre-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
@@ -215,6 +214,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
             <select id="f_notere_borc"><option value="">—</option><option>Beşiktaş 3</option><option>Beşiktaş 27</option></select>
           </div>
           <div class="field"><label>NOTER / CARİ ALACAK <button class="btn btn-grn btn-sm" style="margin-left:4px;padding:1px 7px" onclick="showAddMeta('noter')">+</button></label><select id="f_noter"><option value="">Seçin</option></select></div>
+          <div class="field"><label>NOTER BORÇ TARİHİ</label><input type="date" id="f_noter_borc_tarihi"></div>
           <div class="field"><label>TERCÜMAN</label><input type="text" id="f_tercuman" placeholder="Adı Soyadı..."></div>
           <div class="field"><label>DURUM</label>
             <select id="f_durum"><option value="">Seçin</option><option>Teklif verildi</option><option>İşleme alındı</option><option>Kontrol Beklemede</option><option>Hazır</option><option>Fatura Beklemede</option><option>Fatura Kesilecek</option><option>Tamamlandı</option></select>
@@ -222,6 +222,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           <div class="field"><label>FATURA</label>
             <select id="f_fatura"><option value="">Seçin</option><option>Faturalı</option><option>Faturasız</option><option>Bedelsiz</option></select>
           </div>
+          <div class="field"><label>FATURA TARİHİ</label><input type="date" id="f_fatura_tarihi"></div>
           <div class="field"><label>TERCÜME BEDELİ (TL)</label><input type="number" id="f_bedel" placeholder="0" inputmode="decimal" oninput="calcKdv()"></div>
           <div class="field"><label>KDV</label>
             <select id="f_kdv" onchange="calcKdv()"><option value="">Seçin</option><option>+ KDV</option><option>KDV Dahil</option></select>
@@ -461,7 +462,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           <button id="importBtn" class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
         </div>
       </div>
-      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.2 · Buz Cyan</div>
+      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.3 · Buz Cyan</div>
     </div>
   </div>
 </div>
@@ -477,9 +478,11 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
       <div class="field"><label>TAKİP</label><select id="e_takip"><option value="">Seçin</option><option>Eren</option><option>Deniz</option><option>Sultan</option><option>Evolin</option></select></div>
       <div class="field"><label>NOTERE BORÇ</label><select id="e_notere_borc"><option value="">—</option><option>Beşiktaş 3</option><option>Beşiktaş 27</option></select></div>
       <div class="field"><label>NOTER / CARİ ALACAK</label><select id="e_noter"><option value="">Seçin</option></select></div>
+      <div class="field"><label>NOTER BORÇ TARİHİ</label><input type="date" id="e_noter_borc_tarihi"></div>
       <div class="field"><label>TERCÜMAN</label><input type="text" id="e_tercuman" placeholder="Adı Soyadı..."></div>
       <div class="field"><label>DURUM</label><select id="e_durum"><option value="">Seçin</option><option>Teklif verildi</option><option>İşleme alındı</option><option>Kontrol Beklemede</option><option>Hazır</option><option>Fatura Beklemede</option><option>Fatura Kesilecek</option><option>Tamamlandı</option></select></div>
       <div class="field"><label>FATURA</label><select id="e_fatura"><option value="">Seçin</option><option>Faturalı</option><option>Faturasız</option><option>Bedelsiz</option></select></div>
+      <div class="field"><label>FATURA TARİHİ</label><input type="date" id="e_fatura_tarihi"></div>
       <div class="field"><label>TERCÜME BEDELİ (TL)</label><input type="number" id="e_bedel" inputmode="decimal" oninput="calcKdvEdit()"></div>
       <div class="field"><label>KDV</label><select id="e_kdv" onchange="calcKdvEdit()"><option value="">Seçin</option><option>+ KDV</option><option>KDV Dahil</option></select></div>
       <div class="field"><label>TOPLAM KDVLİ TUTAR (TL)</label><input type="number" id="e_kdvt" readonly></div>
@@ -603,6 +606,12 @@ function fmtDateTime(iso){ if(!iso)return''; try{ const d=new Date(iso); return 
 function toast(msg,dur=2800){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),dur); }
 function setSyncStatus(s,l){ document.getElementById('syncDot').className='sync-dot '+s; document.getElementById('syncLabel').textContent=l||s; }
 
+// ── EFEKTIF TARİH YARDIMCILARI ───────────────────────────
+// Borç sekmeleri için: noterBorcTarihi yoksa tarih'e düş
+function effNoterTarih(r){ return r.noterBorcTarihi || r.tarih; }
+// Faturalar sekmesi için: faturaTarihi yoksa tarih'e düş
+function effFaturaTarih(r){ return r.faturaTarihi || r.tarih; }
+
 // ── AY/YIL FİLTRE YARDIMCILARI ───────────────────────────
 const AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 
@@ -611,40 +620,37 @@ function bugunAyYil() {
   return { ay: now.getMonth() + 1, yil: now.getFullYear() };
 }
 
-// Verilen kayıt listesinden benzersiz yılları çıkar
-function uniqueYears(records) {
-  return [...new Set(records.map(r => r.tarih?.slice(0,4)).filter(Boolean))].sort().reverse();
+function uniqueYears(records, dateFn) {
+  const fn = dateFn || (r => r.tarih);
+  return [...new Set(records.map(r => fn(r)?.slice(0,4)).filter(Boolean))].sort().reverse();
 }
 
-// Dropdown'ları doldur; varsayılan = bu ay/yıl (eğer verisi varsa), yoksa en yeni
-function populateAyYil(aySelId, yilSelId, records, onChangeFn) {
+function populateAyYil(aySelId, yilSelId, records, onChangeFn, dateFn) {
   const { ay: buAy, yil: buYil } = bugunAyYil();
-  const yillar = uniqueYears(records);
+  const yillar = uniqueYears(records, dateFn);
   const yilSel = document.getElementById(yilSelId);
   const aySel  = document.getElementById(aySelId);
   if(!yilSel || !aySel) return;
 
-  // Yıl dropdown
   yilSel.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
-  // Varsayılan yıl: bu yıl varsa seç, yoksa en yeni
   yilSel.value = yillar.includes(String(buYil)) ? String(buYil) : (yillar[0] || String(buYil));
 
-  // Ay dropdown: Tüm aylar + 12 ay
   aySel.innerHTML = '<option value="00">Tüm aylar</option>' +
     AYLAR.map((ad,i) => `<option value="${String(i+1).padStart(2,'0')}">${ad}</option>`).join('');
-  // Varsayılan ay: bu ay
   aySel.value = String(buAy).padStart(2,'0');
 }
 
-// Seçili ay/yıl'a göre filtrele (ay "00" ise sadece yıla göre)
-function filterByAyYil(records, aySelId, yilSelId) {
+// dateFn opsiyonel: hangi tarih alanına göre filtreleneceği
+function filterByAyYil(records, aySelId, yilSelId, dateFn) {
+  const fn = dateFn || (r => r.tarih);
   const ay  = gv(aySelId);
   const yil = gv(yilSelId);
   if(!yil) return records;
   return records.filter(r => {
-    if(!r.tarih) return false;
-    if(!r.tarih.startsWith(yil)) return false;
-    if(ay && ay !== '00' && r.tarih.slice(5,7) !== ay) return false;
+    const d = fn(r);
+    if(!d) return false;
+    if(!d.startsWith(yil)) return false;
+    if(ay && ay !== '00' && d.slice(5,7) !== ay) return false;
     return true;
   });
 }
@@ -701,12 +707,13 @@ async function syncNow() {
       if(changed) await saveMeta();
     }
     populateSelects();
-    // Tüm ay/yıl dropdown'larını doldur
-    populateAyYil('fat_aySel','fat_yilSel', state.gundem.filter(r=>r.fatura==='Faturalı'));
+    // Faturalar: efektif fatura tarihine göre yıl listesi
+    populateAyYil('fat_aySel','fat_yilSel', state.gundem.filter(r=>r.fatura==='Faturalı'), null, effFaturaTarih);
     populateAyYil('fs_aySel','fs_yilSel',  state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'));
     populateKasaAyYil();
-    populateAyYil('b3_aySel','b3_yilSel',  state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'));
-    populateAyYil('b27_aySel','b27_yilSel', state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'));
+    // Borç sekmeleri: efektif noter tarihi
+    populateAyYil('b3_aySel','b3_yilSel',  state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'), null, effNoterTarih);
+    populateAyYil('b27_aySel','b27_yilSel', state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'), null, effNoterTarih);
     populateAyYil('og_aySel','og_yilSel',  state.ortakGider);
     renderGundem();
     toast('Veriler yüklendi ✓ ('+state.gundem.length+' kayıt)');
@@ -758,6 +765,8 @@ async function saveRecord(){
     kurye:parseFloat(gv('f_kurye'))||0,
     odeme:gv('f_odeme'), odemeDurum:gv('f_odeme_durum'),
     notereBorc:gv('f_notere_borc'),
+    noterBorcTarihi:gv('f_noter_borc_tarihi'),
+    faturaTarihi:gv('f_fatura_tarihi'),
     detay:gv('f_detay'),
     kaydeden:getAktifKullanici(), olusturma:nowISO()
   };
@@ -769,7 +778,7 @@ async function saveRecord(){
 }
 
 function clearForm(){
-  ['f_islem','f_teslim','f_bedel','f_kdvt','f_noter_b','f_kurye','f_detay','f_tercuman'].forEach(id=>sv(id,''));
+  ['f_islem','f_teslim','f_bedel','f_kdvt','f_noter_b','f_kurye','f_detay','f_tercuman','f_noter_borc_tarihi','f_fatura_tarihi'].forEach(id=>sv(id,''));
   ['f_noter','f_takip','f_durum','f_fatura','f_kdv','f_odeme','f_odeme_durum','f_notere_borc'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   sv('f_tarih',today());
 }
@@ -808,7 +817,8 @@ function recCard(r){
   const dlStr=r.teslim?` · <span class="${dlc}">📅 ${fmtD(r.teslim)}</span>`:'';
   const extras=[];
   if(r.noter)extras.push('📋 '+r.noter);
-  if(r.notereBorc)extras.push('🏛 Borç: '+r.notereBorc);
+  if(r.notereBorc)extras.push('🏛 Borç: '+r.notereBorc+(r.noterBorcTarihi?' ('+fmtD(r.noterBorcTarihi)+')':''));
+  if(r.faturaTarihi)extras.push('🧾 Fat. Tar.: '+fmtD(r.faturaTarihi));
   if(r.takip)extras.push('👤 '+r.takip);
   if(r.tercuman)extras.push('🗣 '+r.tercuman);
   if(r.kurye)extras.push('🚚 '+fmt(r.kurye)+' ₺');
@@ -835,7 +845,10 @@ function openEdit(id){
   sv('e_bedel',r.bedel||'');sv('e_kdv',r.kdv);sv('e_kdvt',r.kdvTutar||'');
   sv('e_noter_b',r.noterBedel||'');sv('e_kurye',r.kurye||'');
   sv('e_odeme',r.odeme);sv('e_odeme_durum',r.odemeDurum||'');
-  sv('e_notere_borc',r.notereBorc||'');sv('e_detay',r.detay);
+  sv('e_notere_borc',r.notereBorc||'');
+  sv('e_noter_borc_tarihi',r.noterBorcTarihi||'');
+  sv('e_fatura_tarihi',r.faturaTarihi||'');
+  sv('e_detay',r.detay);
   document.getElementById('editModal').style.display='flex';
 }
 
@@ -851,7 +864,10 @@ async function confirmSaveEdit(){
     noterBedel:parseFloat(gv('e_noter_b'))||0,
     kurye:parseFloat(gv('e_kurye'))||0,
     odeme:gv('e_odeme'),odemeDurum:gv('e_odeme_durum'),
-    notereBorc:gv('e_notere_borc'),detay:gv('e_detay'),
+    notereBorc:gv('e_notere_borc'),
+    noterBorcTarihi:gv('e_noter_borc_tarihi'),
+    faturaTarihi:gv('e_fatura_tarihi'),
+    detay:gv('e_detay'),
     guncelleme:nowISO(),kaydeden:getAktifKullanici()
   });
   state.gundem[idx]=updated;
@@ -883,13 +899,14 @@ function getFaturalarBase(){
 
 function renderFaturalar(){
   const base = getFaturalarBase();
-  const filtered = filterByAyYil(base,'fat_aySel','fat_yilSel');
+  // Faturalar sekmesi efektif fatura tarihine göre filtreler
+  const filtered = filterByAyYil(base,'fat_aySel','fat_yilSel', effFaturaTarih);
   const shown = filtered.filter(r=>{
     if(fatFilter==='kesilecek') return r.durum==='Fatura Kesilecek';
     if(fatFilter==='beklemede') return r.durum==='Fatura Beklemede';
     if(fatFilter==='tamamlandi') return r.durum==='Tamamlandı';
     return true;
-  }).sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
+  }).sort((a,b)=>effFaturaTarih(b).localeCompare(effFaturaTarih(a)));
 
   const bekleyen=filtered.filter(r=>r.durum==='Fatura Beklemede'||r.durum==='Fatura Kesilecek');
   const kesilen=filtered.filter(r=>r.durum==='Tamamlandı');
@@ -1123,7 +1140,8 @@ async function confirmDeleteCari(){
 // ── BEŞİKTAŞ BORÇ ─────────────────────────────────────────
 function renderBorc3(){
   const base=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3');
-  const list=filterByAyYil(base,'b3_aySel','b3_yilSel').sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
+  // Borç sekmesi efektif noter tarihine göre filtreler
+  const list=filterByAyYil(base,'b3_aySel','b3_yilSel', effNoterTarih).sort((a,b)=>effNoterTarih(b).localeCompare(effNoterTarih(a)));
   document.getElementById('b3_stats').innerHTML=`
     <div class="stat sr"><div class="lbl">Kayıt Sayısı</div><div class="val">${list.length}</div></div>
     <div class="stat sr"><div class="lbl">Noter Bedeli Toplam</div><div class="val">${fmt(list.reduce((s,r)=>s+(r.noterBedel||0),0))} ₺</div></div>`;
@@ -1132,7 +1150,7 @@ function renderBorc3(){
 
 function renderBorc27(){
   const base=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27');
-  const list=filterByAyYil(base,'b27_aySel','b27_yilSel').sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
+  const list=filterByAyYil(base,'b27_aySel','b27_yilSel', effNoterTarih).sort((a,b)=>effNoterTarih(b).localeCompare(effNoterTarih(a)));
   document.getElementById('b27_stats').innerHTML=`
     <div class="stat sr"><div class="lbl">Kayıt Sayısı</div><div class="val">${list.length}</div></div>
     <div class="stat sr"><div class="lbl">Noter Bedeli Toplam</div><div class="val">${fmt(list.reduce((s,r)=>s+(r.noterBedel||0),0))} ₺</div></div>`;
@@ -1140,11 +1158,12 @@ function renderBorc27(){
 }
 
 function borcCard(r){
+  const noterTarihStr = r.noterBorcTarihi ? fmtD(r.noterBorcTarihi) : fmtD(r.tarih);
   return`<div class="borc-rec">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div class="borc-rec-title">${r.islem||'—'}</div>
-        <div class="borc-rec-sub">${fmtD(r.tarih)}${r.noter?' · '+r.noter:''}</div>
+        <div class="borc-rec-sub">Makbuz: ${noterTarihStr}${r.noter?' · '+r.noter:''}</div>
         ${r.tercuman?`<div class="borc-rec-sub">🗣 ${r.tercuman}</div>`:''}
       </div>
       <div style="text-align:right">
@@ -1286,9 +1305,9 @@ async function saveMeta(){
 function exportCSV(tab){
   let rows=[], headers=[], filename='ceviriburo_'+tab+'_'+today()+'.csv';
   if(tab==='gundem'||tab==='faturalar'||tab==='faturasiz'){
-    let data=tab==='gundem'?getGundemFiltered():tab==='faturalar'?filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel'):filterByAyYil(state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'),'fs_aySel','fs_yilSel');
-    headers=['Tarih','Teslim','İşlem','İlgili','Noter','Takip','Tercüman','Durum','Fatura','Bedel','KDV','KDV Tutarı','Noter Bedeli','Kurye','Ödeme Şekli','Ödeme Durumu','Notere Borç','Detay'];
-    rows=data.map(r=>[r.tarih,r.teslim,`"${r.islem||''}"`,r.ilgili,r.noter,r.takip,r.tercuman,r.durum,r.fatura,r.bedel,r.kdv,r.kdvTutar,r.noterBedel,r.kurye,r.odeme,r.odemeDurum,r.notereBorc,`"${r.detay||''}"`].join(','));
+    let data=tab==='gundem'?getGundemFiltered():tab==='faturalar'?filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel',effFaturaTarih):filterByAyYil(state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'),'fs_aySel','fs_yilSel');
+    headers=['Tarih','Teslim','İşlem','İlgili','Noter','Takip','Tercüman','Durum','Fatura','Fatura Tarihi','Bedel','KDV','KDV Tutarı','Noter Bedeli','Noter Borç Tarihi','Kurye','Ödeme Şekli','Ödeme Durumu','Notere Borç','Detay'];
+    rows=data.map(r=>[r.tarih,r.teslim,`"${r.islem||''}"`,r.ilgili,r.noter,r.takip,r.tercuman,r.durum,r.fatura,r.faturaTarihi||'',r.bedel,r.kdv,r.kdvTutar,r.noterBedel,r.noterBorcTarihi||'',r.kurye,r.odeme,r.odemeDurum,r.notereBorc,`"${r.detay||''}"`].join(','));
   } else if(tab==='kasa'){
     const yil=gv('kasaYilSel'); const ay=gv('kasaAySel');
     const prefix=ay==='00'?yil:(yil+'-'+ay);
@@ -1300,13 +1319,13 @@ function exportCSV(tab){
     headers=['Tarih','İşlem','Bedel','Ödeme Şekli','Ödeme Durumu'];
     rows=data.map(r=>[r.tarih,`"${r.islem||''}"`,r.bedel,r.odeme,r.odemeDurum].join(','));
   } else if(tab==='borc3'){
-    const data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel');
-    headers=['Tarih','İşlem','Noter Bedeli','Detay'];
-    rows=data.map(r=>[r.tarih,`"${r.islem||''}"`,r.noterBedel,`"${r.detay||''}"`].join(','));
+    const data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel',effNoterTarih);
+    headers=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli','Detay'];
+    rows=data.map(r=>[r.tarih,r.noterBorcTarihi||r.tarih,`"${r.islem||''}"`,r.noterBedel,`"${r.detay||''}"`].join(','));
   } else if(tab==='borc27'){
-    const data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'),'b27_aySel','b27_yilSel');
-    headers=['Tarih','İşlem','Noter Bedeli','Detay'];
-    rows=data.map(r=>[r.tarih,`"${r.islem||''}"`,r.noterBedel,`"${r.detay||''}"`].join(','));
+    const data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'),'b27_aySel','b27_yilSel',effNoterTarih);
+    headers=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli','Detay'];
+    rows=data.map(r=>[r.tarih,r.noterBorcTarihi||r.tarih,`"${r.islem||''}"`,r.noterBedel,`"${r.detay||''}"`].join(','));
   } else if(tab==='ortakgider'){
     const data=filterByAyYil(state.ortakGider,'og_aySel','og_yilSel');
     headers=['Tarih','Açıklama','Tutar','Kaydeden'];
@@ -1323,22 +1342,22 @@ function exportCSV(tab){
 function exportPDF(tab){
   let data=[], title='', cols=[];
   if(tab==='gundem'){data=getGundemFiltered();title='Gündem';cols=['Tarih','İşlem','Noter','Fatura','Durum','Bedel','Ödeme'];}
-  else if(tab==='faturalar'){data=filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel');title='Faturalar';cols=['Tarih','İşlem','Durum','Bedel','Ödeme Durumu'];}
+  else if(tab==='faturalar'){data=filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel',effFaturaTarih);title='Faturalar';cols=['İşlem Tarihi','Fatura Tarihi','İşlem','Durum','Bedel','Ödeme Durumu'];}
   else if(tab==='faturasiz'){data=filterByAyYil(state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'),'fs_aySel','fs_yilSel');title='Faturasız';cols=['Tarih','İşlem','Bedel','Kurye','Ödeme','Ödeme Durumu'];}
   else if(tab==='kasa'){const yil=gv('kasaYilSel');const ay=gv('kasaAySel');const prefix=ay==='00'?yil:(yil+'-'+ay);data=state.kasaGider.filter(r=>!prefix||r.tarih?.startsWith(prefix));title='Kasa';cols=['Tarih','Tür','Açıklama','Tutar'];}
   else if(tab==='cariler'){data=activeCari?getCariRecs('all'):[];title='Cariler - '+(activeCari||'');cols=['Tarih','İşlem','Bedel','Ödeme Durumu'];}
-  else if(tab==='borc3'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel');title='Beşiktaş 3 Borç';cols=['Tarih','İşlem','Noter Bedeli'];}
-  else if(tab==='borc27'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'),'b27_aySel','b27_yilSel');title='Beşiktaş 27 Borç';cols=['Tarih','İşlem','Noter Bedeli'];}
+  else if(tab==='borc3'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel',effNoterTarih);title='Beşiktaş 3 Borç';cols=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli'];}
+  else if(tab==='borc27'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'),'b27_aySel','b27_yilSel',effNoterTarih);title='Beşiktaş 27 Borç';cols=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli'];}
   else if(tab==='ortakgider'){data=filterByAyYil(state.ortakGider,'og_aySel','og_yilSel');title='Ortak Gider';cols=['Tarih','Açıklama','Tutar'];}
   else if(tab==='aysonunotlar'){data=state.aysonuNotlar;title='Ay Sonu Notlar';cols=['Tarih','Açıklama'];}
   if(!data.length){toast('Dışa aktarılacak kayıt yok');return;}
   function getRow(r,t){
     if(t==='gundem') return[fmtD(r.tarih),r.islem||'',r.noter||'',r.fatura||'',r.durum||'',fmt(r.bedel)+' ₺',r.odeme||''];
-    if(t==='faturalar') return[fmtD(r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
+    if(t==='faturalar') return[fmtD(r.tarih),fmtD(r.faturaTarihi||r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
     if(t==='faturasiz') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',fmt(r.kurye)+' ₺',r.odeme||'',r.odemeDurum||''];
     if(t==='kasa') return[fmtD(r.tarih),r.tur||'',r.aciklama||'',fmt(r.tutar)+' ₺'];
     if(t==='cariler') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
-    if(t==='borc3'||t==='borc27') return[fmtD(r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
+    if(t==='borc3'||t==='borc27') return[fmtD(r.tarih),fmtD(r.noterBorcTarihi||r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
     if(t==='ortakgider') return[fmtD(r.tarih),r.aciklama||'',fmt(r.tutar)+' ₺'];
     if(t==='aysonunotlar') return[fmtD(r.tarih),r.aciklama||''];
     return[];
@@ -1351,14 +1370,14 @@ function exportPDF(tab){
 async function importEskiBorclar(){
   if(!confirm('Eski Beşiktaş 3 ve 27 Borç kayıtları Gündem\'e aktarılacak. Devam?'))return;
   const b3Data=[
-    {id:'BES3_001',tarih:'2026-05-05',islem:'Şule Canaydın',noterBedel:11212.12,notereBorc:'Beşiktaş 3',detay:'Beşiktaş 3 Borç',kaydeden:'Eren',olusturma:'2026-05-05T15:43:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
-    {id:'BES3_002',tarih:'2026-05-06',islem:'Yelda Demir/Aslı - Diploma Eki',noterBedel:19462.83,notereBorc:'Beşiktaş 3',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T16:50:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
-    {id:'BES3_003',tarih:'2026-05-12',islem:'Alihan Essani Pasaport',noterBedel:1510.19,notereBorc:'Beşiktaş 3',detay:'Ofisten Teslim E.',kaydeden:'Sultan',olusturma:'2026-05-12T19:28:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
-    {id:'BES3_004',tarih:'2026-05-12',islem:'Jasmin Ara 2. Nüshalar',noterBedel:7077,notereBorc:'Beşiktaş 3',detay:'Bilgi verilecek.',kaydeden:'Sultan',olusturma:'2026-05-12T13:01:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
-    {id:'BES3_005',tarih:'2026-05-12',islem:'Mehmet Egem K. - Nüfus Kayıt',noterBedel:2067.35,notereBorc:'Beşiktaş 3',detay:'Kurye bedeli ekl.',kaydeden:'Sultan',olusturma:'2026-05-12T13:03:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES3_001',tarih:'2026-05-05',islem:'Şule Canaydın',noterBedel:11212.12,notereBorc:'Beşiktaş 3',detay:'Beşiktaş 3 Borç',kaydeden:'Eren',olusturma:'2026-05-05T15:43:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
+    {id:'BES3_002',tarih:'2026-05-06',islem:'Yelda Demir/Aslı - Diploma Eki',noterBedel:19462.83,notereBorc:'Beşiktaş 3',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T16:50:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
+    {id:'BES3_003',tarih:'2026-05-12',islem:'Alihan Essani Pasaport',noterBedel:1510.19,notereBorc:'Beşiktaş 3',detay:'Ofisten Teslim E.',kaydeden:'Sultan',olusturma:'2026-05-12T19:28:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
+    {id:'BES3_004',tarih:'2026-05-12',islem:'Jasmin Ara 2. Nüshalar',noterBedel:7077,notereBorc:'Beşiktaş 3',detay:'Bilgi verilecek.',kaydeden:'Sultan',olusturma:'2026-05-12T13:01:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
+    {id:'BES3_005',tarih:'2026-05-12',islem:'Mehmet Egem K. - Nüfus Kayıt',noterBedel:2067.35,notereBorc:'Beşiktaş 3',detay:'Kurye bedeli ekl.',kaydeden:'Sultan',olusturma:'2026-05-12T13:03:00Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
   ];
   const b27Data=[
-    {id:'BES27_001',tarih:'2026-05-06',islem:'BEEMAC - Selin Yetiş - 3 Evrak',noterBedel:7000,notereBorc:'Beşiktaş 27',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T11:51:07Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:''},
+    {id:'BES27_001',tarih:'2026-05-06',islem:'BEEMAC - Selin Yetiş - 3 Evrak',noterBedel:7000,notereBorc:'Beşiktaş 27',detay:'',kaydeden:'Sultan',olusturma:'2026-05-06T11:51:07Z',fatura:'',bedel:0,kdv:'',kdvTutar:0,kurye:0,odeme:'',odemeDurum:'',noter:'',takip:'',tercuman:'',durum:'',teslim:'',noterBorcTarihi:'',faturaTarihi:''},
   ];
   const tumData=[...b3Data,...b27Data];
   setSyncStatus('ing','aktarılıyor...');
