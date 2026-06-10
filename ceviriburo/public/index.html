@@ -462,7 +462,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           <button id="importBtn" class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
         </div>
       </div>
-      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.3 · Buz Cyan</div>
+      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.4 · Buz Cyan</div>
     </div>
   </div>
 </div>
@@ -606,10 +606,11 @@ function fmtDateTime(iso){ if(!iso)return''; try{ const d=new Date(iso); return 
 function toast(msg,dur=2800){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),dur); }
 function setSyncStatus(s,l){ document.getElementById('syncDot').className='sync-dot '+s; document.getElementById('syncLabel').textContent=l||s; }
 
+// Gündem kaydından kasaya giren gerçek toplam tutar
+function kasaTutari(r){ return (r.bedel||0)+(r.noterBedel||0)+(r.kurye||0); }
+
 // ── EFEKTIF TARİH YARDIMCILARI ───────────────────────────
-// Borç sekmeleri için: noterBorcTarihi yoksa tarih'e düş
 function effNoterTarih(r){ return r.noterBorcTarihi || r.tarih; }
-// Faturalar sekmesi için: faturaTarihi yoksa tarih'e düş
 function effFaturaTarih(r){ return r.faturaTarihi || r.tarih; }
 
 // ── AY/YIL FİLTRE YARDIMCILARI ───────────────────────────
@@ -640,7 +641,6 @@ function populateAyYil(aySelId, yilSelId, records, onChangeFn, dateFn) {
   aySel.value = String(buAy).padStart(2,'0');
 }
 
-// dateFn opsiyonel: hangi tarih alanına göre filtreleneceği
 function filterByAyYil(records, aySelId, yilSelId, dateFn) {
   const fn = dateFn || (r => r.tarih);
   const ay  = gv(aySelId);
@@ -707,11 +707,9 @@ async function syncNow() {
       if(changed) await saveMeta();
     }
     populateSelects();
-    // Faturalar: efektif fatura tarihine göre yıl listesi
     populateAyYil('fat_aySel','fat_yilSel', state.gundem.filter(r=>r.fatura==='Faturalı'), null, effFaturaTarih);
     populateAyYil('fs_aySel','fs_yilSel',  state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'));
     populateKasaAyYil();
-    // Borç sekmeleri: efektif noter tarihi
     populateAyYil('b3_aySel','b3_yilSel',  state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'), null, effNoterTarih);
     populateAyYil('b27_aySel','b27_yilSel', state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'), null, effNoterTarih);
     populateAyYil('og_aySel','og_yilSel',  state.ortakGider);
@@ -899,7 +897,6 @@ function getFaturalarBase(){
 
 function renderFaturalar(){
   const base = getFaturalarBase();
-  // Faturalar sekmesi efektif fatura tarihine göre filtreler
   const filtered = filterByAyYil(base,'fat_aySel','fat_yilSel', effFaturaTarih);
   const shown = filtered.filter(r=>{
     if(fatFilter==='kesilecek') return r.durum==='Fatura Kesilecek';
@@ -959,8 +956,13 @@ function renderKasa(){
   const gundemK=state.gundem.filter(r=>r.odeme==='Kasa'&&r.tarih?.startsWith(prefix));
   const kasaK=state.kasaGider.filter(r=>r.tarih?.startsWith(prefix));
 
-  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
-  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+(r.bedel||0),0)+kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
+  // ── DÜZELTİLDİ: bedel + noterBedel + kurye toplamı kasaya girer ──
+  const faturasizGelir=gundemK.filter(r=>r.fatura==='Faturasız').reduce((s,r)=>s+kasaTutari(r),0)
+    +kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturasız').reduce((s,r)=>s+(r.tutar||0),0);
+  const faturaliGelir=gundemK.filter(r=>r.fatura==='Faturalı').reduce((s,r)=>s+kasaTutari(r),0)
+    +kasaK.filter(r=>r.tur==='Gelir'&&r.fatura==='Faturalı').reduce((s,r)=>s+(r.tutar||0),0);
+  // ─────────────────────────────────────────────────────────────────
+
   const topGiris=kasaK.filter(r=>r.tur==='Giriş').reduce((s,r)=>s+(r.tutar||0),0);
   const topNoter=kasaK.filter(r=>r.tur==='Noter').reduce((s,r)=>s+(r.tutar||0),0);
   const topDevir=kasaK.filter(r=>r.tur==='Devir').reduce((s,r)=>s+(r.tutar||0),0);
@@ -998,7 +1000,19 @@ function renderKasa(){
     </div>`;
 
   const byDay={};
-  gundemK.forEach(r=>{ if(!r.tarih)return; if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]}; byDay[r.tarih].gelir.push({lbl:r.islem,tutar:r.bedel,sub:(r.fatura||'')+' · '+(r.noter||''),gundemId:String(r.id)}); });
+  // ── DÜZELTİLDİ: kasa satırında kasaTutari(r) kullanılıyor ──
+  gundemK.forEach(r=>{
+    if(!r.tarih)return;
+    if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]};
+    const toplam=kasaTutari(r);
+    const subParts=[];
+    if(r.fatura)subParts.push(r.fatura);
+    if(r.noter)subParts.push(r.noter);
+    if(r.noterBedel)subParts.push('Noter: '+fmt(r.noterBedel)+' ₺');
+    if(r.kurye)subParts.push('Kurye: '+fmt(r.kurye)+' ₺');
+    byDay[r.tarih].gelir.push({lbl:r.islem,tutar:toplam,sub:subParts.join(' · '),gundemId:String(r.id)});
+  });
+  // ───────────────────────────────────────────────────────────
   kasaK.forEach(r=>{ if(!byDay[r.tarih])byDay[r.tarih]={gelir:[],gider:[]}; const isPos=['Gelir','Giriş','Noter','Devir'].includes(r.tur); byDay[r.tarih][isPos?'gelir':'gider'].push({lbl:r.aciklama,tutar:r.tutar,sub:(r.fatura||'')+' · '+r.tur,id:r.id}); });
   let cum=0; const cumMap={};
   Object.keys(byDay).sort().forEach(d=>{ cum+=byDay[d].gelir.reduce((s,r)=>s+(r.tutar||0),0)-byDay[d].gider.reduce((s,r)=>s+(r.tutar||0),0); cumMap[d]=cum; });
@@ -1140,7 +1154,6 @@ async function confirmDeleteCari(){
 // ── BEŞİKTAŞ BORÇ ─────────────────────────────────────────
 function renderBorc3(){
   const base=state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3');
-  // Borç sekmesi efektif noter tarihine göre filtreler
   const list=filterByAyYil(base,'b3_aySel','b3_yilSel', effNoterTarih).sort((a,b)=>effNoterTarih(b).localeCompare(effNoterTarih(a)));
   document.getElementById('b3_stats').innerHTML=`
     <div class="stat sr"><div class="lbl">Kayıt Sayısı</div><div class="val">${list.length}</div></div>
