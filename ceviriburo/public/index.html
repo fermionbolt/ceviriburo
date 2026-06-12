@@ -1126,10 +1126,10 @@ function renderCariDetail(){
   if(cariFilter==='beklemede') recs=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum);
   else if(cariFilter==='alindi') recs=recs.filter(r=>r.odemeDurum==='Alındı');
   recs.sort((a,b)=>(b.tarih||'').localeCompare(a.tarih||''));
-  const tercumeBedeli=recs.reduce((s,r)=>s+(r.bedel||0),0);
+  const tercumeBedeli=recs.reduce((s,r)=>s+kasaTutari(r),0);
   const noterBedeli=recs.reduce((s,r)=>s+(r.noterBedel||0),0);
-  const kuryeBedeli=recs.reduce((s,r)=>s+(r.kurye||0),0);
-  const genelToplam=tercumeBedeli+noterBedeli+kuryeBedeli;
+  const kuryeBedeli=0;
+  const genelToplam=tercumeBedeli+noterBedeli;
   const alinan=recs.filter(r=>r.odemeDurum==='Alındı').reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
   const bekleyen=recs.filter(r=>r.odemeDurum==='Beklemede'||!r.odemeDurum).reduce((s,r)=>s+(r.bedel||0)+(r.noterBedel||0)+(r.kurye||0),0);
   document.getElementById('cariTotal').textContent=fmt(genelToplam)+' ₺';
