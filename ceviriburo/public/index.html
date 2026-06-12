@@ -1112,7 +1112,7 @@ function populateCariAy(){
 
 function getCariRecs(ay){
   return state.gundem.filter(r=>{
-    if(r.fatura!=='Faturasız') return false;
+    // fatura tipi fark etmeksizin cariye bağlı tüm kayıtlar gösterilir
     if(r.noter!==activeCari&&r.ilgili!==activeCari) return false;
     if(ay&&ay!=='all'&&!r.tarih?.startsWith(ay)) return false;
     return true;
