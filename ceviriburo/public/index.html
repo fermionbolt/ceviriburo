@@ -462,7 +462,7 @@ input::placeholder,textarea::placeholder{color:var(--txt3)}
           <button id="importBtn" class="btn btn-amb btn-full" onclick="importEskiBorclar()">⬆ Eski Beşiktaş 3 & 27 Verilerini İçe Aktar (Tek Seferlik)</button>
         </div>
       </div>
-      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.4 · Buz Cyan</div>
+      <div style="text-align:center;font-size:10px;color:var(--txt3);font-family:var(--mono);padding:16px 0">ÇeviriBüro v5.5 · Buz Cyan</div>
     </div>
   </div>
 </div>
@@ -1061,8 +1061,12 @@ async function deleteKasaEntry(id){
 // ── FATURASIZ ─────────────────────────────────────────────
 function setFsF(f,btn){ fsFilter=f; document.querySelectorAll('#fsFilterBar .fbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderFaturasiz(); }
 
+function getFaturasizBase(){
+  return state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa');
+}
+
 function renderFaturasiz(){
-  const base=state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa');
+  const base=getFaturasizBase();
   const filtered=filterByAyYil(base,'fs_aySel','fs_yilSel');
   const list=filtered.filter(r=>{
     if(fsFilter==='beklemede') return r.odemeDurum==='Beklemede'||!r.odemeDurum;
@@ -1315,12 +1319,31 @@ async function saveMeta(){
 }
 
 // ── EXPORT ────────────────────────────────────────────────
+// Tercüme/Noter/Toplam formatında satır + alt toplam üreten ortak yardımcı
+function buildTercumeNoterRows(data){
+  let tercumeToplam=0, noterToplam=0;
+  const rows=data.map(r=>{
+    const tercume=kasaTutari(r);
+    const noter=r.noterBedel||0;
+    tercumeToplam+=tercume; noterToplam+=noter;
+    return {tarih:r.tarih,islem:r.islem||'',tercume,noter};
+  });
+  return {rows, tercumeToplam, noterToplam, genelToplam:tercumeToplam+noterToplam};
+}
+
 function exportCSV(tab){
   let rows=[], headers=[], filename='ceviriburo_'+tab+'_'+today()+'.csv';
-  if(tab==='gundem'||tab==='faturalar'||tab==='faturasiz'){
-    let data=tab==='gundem'?getGundemFiltered():tab==='faturalar'?filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel',effFaturaTarih):filterByAyYil(state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'),'fs_aySel','fs_yilSel');
+  if(tab==='gundem'||tab==='faturalar'){
+    let data=tab==='gundem'?getGundemFiltered():filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel',effFaturaTarih);
     headers=['Tarih','Teslim','İşlem','İlgili','Noter','Takip','Tercüman','Durum','Fatura','Fatura Tarihi','Bedel','KDV','KDV Tutarı','Noter Bedeli','Noter Borç Tarihi','Kurye','Ödeme Şekli','Ödeme Durumu','Notere Borç','Detay'];
     rows=data.map(r=>[r.tarih,r.teslim,`"${r.islem||''}"`,r.ilgili,r.noter,r.takip,r.tercuman,r.durum,r.fatura,r.faturaTarihi||'',r.bedel,r.kdv,r.kdvTutar,r.noterBedel,r.noterBorcTarihi||'',r.kurye,r.odeme,r.odemeDurum,r.notereBorc,`"${r.detay||''}"`].join(','));
+  } else if(tab==='faturasiz'){
+    const data=filterByAyYil(getFaturasizBase(),'fs_aySel','fs_yilSel');
+    headers=['Tarih','İşlem','Tercüme Bedeli','Noter Bedeli'];
+    const {rows:r2,tercumeToplam,noterToplam,genelToplam}=buildTercumeNoterRows(data);
+    rows=r2.map(r=>[r.tarih,`"${r.islem}"`,r.tercume,r.noter].join(','));
+    rows.push(['','TOPLAM',tercumeToplam,noterToplam].join(','));
+    rows.push(['','GENEL TOPLAM BAKİYE',genelToplam,''].join(','));
   } else if(tab==='kasa'){
     const yil=gv('kasaYilSel'); const ay=gv('kasaAySel');
     const prefix=ay==='00'?yil:(yil+'-'+ay);
@@ -1329,8 +1352,11 @@ function exportCSV(tab){
     rows=data.map(r=>[r.tarih,r.tur,`"${r.aciklama||''}"`,r.tutar,r.fatura].join(','));
   } else if(tab==='cariler'){
     const data=activeCari?getCariRecs('all'):[];
-    headers=['Tarih','İşlem','Bedel','Ödeme Şekli','Ödeme Durumu'];
-    rows=data.map(r=>[r.tarih,`"${r.islem||''}"`,r.bedel,r.odeme,r.odemeDurum].join(','));
+    headers=['Tarih','İşlem','Tercüme Bedeli','Noter Bedeli'];
+    const {rows:r2,tercumeToplam,noterToplam,genelToplam}=buildTercumeNoterRows(data);
+    rows=r2.map(r=>[r.tarih,`"${r.islem}"`,r.tercume,r.noter].join(','));
+    rows.push(['','TOPLAM',tercumeToplam,noterToplam].join(','));
+    rows.push(['','GENEL TOPLAM BAKİYE',genelToplam,''].join(','));
   } else if(tab==='borc3'){
     const data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel',effNoterTarih);
     headers=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli','Detay'];
@@ -1356,27 +1382,41 @@ function exportPDF(tab){
   let data=[], title='', cols=[];
   if(tab==='gundem'){data=getGundemFiltered();title='Gündem';cols=['Tarih','İşlem','Noter','Fatura','Durum','Bedel','Ödeme'];}
   else if(tab==='faturalar'){data=filterByAyYil(getFaturalarBase(),'fat_aySel','fat_yilSel',effFaturaTarih);title='Faturalar';cols=['İşlem Tarihi','Fatura Tarihi','İşlem','Durum','Bedel','Ödeme Durumu'];}
-  else if(tab==='faturasiz'){data=filterByAyYil(state.gundem.filter(r=>r.fatura==='Faturasız'&&r.odeme!=='Kasa'),'fs_aySel','fs_yilSel');title='Faturasız';cols=['Tarih','İşlem','Bedel','Kurye','Ödeme','Ödeme Durumu'];}
+  else if(tab==='faturasiz'){
+    data=filterByAyYil(getFaturasizBase(),'fs_aySel','fs_yilSel');
+    title='Faturasız'; cols=['Tarih','İşlem','Tercüme Bedeli','Noter Bedeli'];
+  }
   else if(tab==='kasa'){const yil=gv('kasaYilSel');const ay=gv('kasaAySel');const prefix=ay==='00'?yil:(yil+'-'+ay);data=state.kasaGider.filter(r=>!prefix||r.tarih?.startsWith(prefix));title='Kasa';cols=['Tarih','Tür','Açıklama','Tutar'];}
-  else if(tab==='cariler'){data=activeCari?getCariRecs('all'):[];title='Cariler - '+(activeCari||'');cols=['Tarih','İşlem','Bedel','Ödeme Durumu'];}
+  else if(tab==='cariler'){
+    data=activeCari?getCariRecs('all'):[];
+    title='Cariler - '+(activeCari||''); cols=['Tarih','İşlem','Tercüme Bedeli','Noter Bedeli'];
+  }
   else if(tab==='borc3'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 3'),'b3_aySel','b3_yilSel',effNoterTarih);title='Beşiktaş 3 Borç';cols=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli'];}
   else if(tab==='borc27'){data=filterByAyYil(state.gundem.filter(r=>r.notereBorc==='Beşiktaş 27'),'b27_aySel','b27_yilSel',effNoterTarih);title='Beşiktaş 27 Borç';cols=['İşlem Tarihi','Makbuz Tarihi','İşlem','Noter Bedeli'];}
   else if(tab==='ortakgider'){data=filterByAyYil(state.ortakGider,'og_aySel','og_yilSel');title='Ortak Gider';cols=['Tarih','Açıklama','Tutar'];}
   else if(tab==='aysonunotlar'){data=state.aysonuNotlar;title='Ay Sonu Notlar';cols=['Tarih','Açıklama'];}
   if(!data.length){toast('Dışa aktarılacak kayıt yok');return;}
-  function getRow(r,t){
-    if(t==='gundem') return[fmtD(r.tarih),r.islem||'',r.noter||'',r.fatura||'',r.durum||'',fmt(r.bedel)+' ₺',r.odeme||''];
-    if(t==='faturalar') return[fmtD(r.tarih),fmtD(r.faturaTarihi||r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
-    if(t==='faturasiz') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',fmt(r.kurye)+' ₺',r.odeme||'',r.odemeDurum||''];
-    if(t==='kasa') return[fmtD(r.tarih),r.tur||'',r.aciklama||'',fmt(r.tutar)+' ₺'];
-    if(t==='cariler') return[fmtD(r.tarih),r.islem||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
-    if(t==='borc3'||t==='borc27') return[fmtD(r.tarih),fmtD(r.noterBorcTarihi||r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
-    if(t==='ortakgider') return[fmtD(r.tarih),r.aciklama||'',fmt(r.tutar)+' ₺'];
-    if(t==='aysonunotlar') return[fmtD(r.tarih),r.aciklama||''];
-    return[];
+
+  let rows, footerRow='';
+  if(tab==='faturasiz'||tab==='cariler'){
+    const {rows:r2,tercumeToplam,noterToplam,genelToplam}=buildTercumeNoterRows(data);
+    rows=r2.map(r=>`<tr><td>${fmtD(r.tarih)}</td><td>${r.islem}</td><td>${fmt(r.tercume)} ₺</td><td>${fmt(r.noter)} ₺</td></tr>`);
+    footerRow=`<tr style="font-weight:700;background:#eef6f8"><td colspan="2">TOPLAM</td><td>${fmt(tercumeToplam)} ₺</td><td>${fmt(noterToplam)} ₺</td></tr>
+               <tr style="font-weight:700;background:#dff1f5"><td colspan="2">GENEL TOPLAM BAKİYE</td><td colspan="2">${fmt(genelToplam)} ₺</td></tr>`;
+  } else {
+    function getRow(r,t){
+      if(t==='gundem') return[fmtD(r.tarih),r.islem||'',r.noter||'',r.fatura||'',r.durum||'',fmt(r.bedel)+' ₺',r.odeme||''];
+      if(t==='faturalar') return[fmtD(r.tarih),fmtD(r.faturaTarihi||r.tarih),r.islem||'',r.durum||'',fmt(r.bedel)+' ₺',r.odemeDurum||''];
+      if(t==='kasa') return[fmtD(r.tarih),r.tur||'',r.aciklama||'',fmt(r.tutar)+' ₺'];
+      if(t==='borc3'||t==='borc27') return[fmtD(r.tarih),fmtD(r.noterBorcTarihi||r.tarih),r.islem||'',fmt(r.noterBedel)+' ₺'];
+      if(t==='ortakgider') return[fmtD(r.tarih),r.aciklama||'',fmt(r.tutar)+' ₺'];
+      if(t==='aysonunotlar') return[fmtD(r.tarih),r.aciklama||''];
+      return[];
+    }
+    rows=data.map(r=>`<tr>${getRow(r,tab).map(c=>`<td>${c}</td>`).join('')}</tr>`);
   }
-  const rows=data.map(r=>getRow(r,tab).map(c=>`<td>${c}</td>`).join(''));
-  const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial;font-size:10px;padding:24px;color:#111}h2{font-size:16px;margin-bottom:4px}p{color:#666;font-size:10px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#080f14;color:#22d3ee;padding:7px 8px;text-align:left;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}</style></head><body><h2>ÇeviriBüro — ${title}</h2><p>${new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'})} · ${data.length} kayıt</p><table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r}</tr>`).join('')}</table></body></html>`;
+
+  const html=`<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Arial;font-size:10px;padding:24px;color:#111}h2{font-size:16px;margin-bottom:4px}p{color:#666;font-size:10px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th{background:#080f14;color:#22d3ee;padding:7px 8px;text-align:left;font-size:10px}td{padding:5px 8px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}</style></head><body><h2>ÇeviriBüro — ${title}</h2><p>${new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'})} · ${data.length} kayıt</p><table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>${rows.join('')}${footerRow}</table></body></html>`;
   const w=window.open('','_blank'); w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600);
 }
 
