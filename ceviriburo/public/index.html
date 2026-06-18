@@ -607,7 +607,7 @@ function toast(msg,dur=2800){ const el=document.getElementById('toast'); el.text
 function setSyncStatus(s,l){ document.getElementById('syncDot').className='sync-dot '+s; document.getElementById('syncLabel').textContent=l||s; }
 
 // Gündem kaydından kasaya giren gerçek toplam tutar
-function kasaTutari(r){   const tercume = (r.kdv==='+KDV' && r.kdvTutar) ? ((r.bedel||0) + (r.kdvTutar||0)) : (r.bedel||0);   return tercume + (r.kurye||0); }
+function kasaTutari(r){   const tercume = (r.kdv==='+ KDV' && r.kdvTutar) ? ((r.bedel||0) + (r.kdvTutar||0)) : (r.bedel||0);   return tercume + (r.kurye||0); }
 
 // ── EFEKTIF TARİH YARDIMCILARI ───────────────────────────
 function effNoterTarih(r){ return r.noterBorcTarihi || r.tarih; }
